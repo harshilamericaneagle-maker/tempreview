@@ -5,7 +5,7 @@ import Link from "next/link";
 import {
     LayoutDashboard, Star, BarChart3, Lightbulb,
     Settings, LogOut, Zap, ChevronRight, Globe,
-    Bell, CheckSquare, Send
+    Bell, CheckSquare, Send, Trophy, Users, Crosshair, Blocks
 } from "lucide-react";
 import { getBusinessByOwner } from "@/lib/store";
 import { useEffect, useState } from "react";
@@ -18,11 +18,14 @@ const NAV = [
     { href: "/dashboard/requests", icon: Send, label: "Automations" },
     { href: "/dashboard/analytics", icon: BarChart3, label: "Analytics" },
     { href: "/dashboard/ai-insights", icon: Lightbulb, label: "AI Insights" },
+    { href: "/dashboard/team", icon: Trophy, label: "Team Leaderboard" },
+    { href: "/dashboard/competitors", icon: Crosshair, label: "Competitors" },
+    { href: "/dashboard/integrations", icon: Blocks, label: "Integrations" },
     { href: "/dashboard/settings", icon: Settings, label: "Settings" },
 ];
 
 export default function DashboardSidebar() {
-    const { user, logout } = useAuth();
+    const { user, logout, activeLocation, availableLocations, setActiveLocation } = useAuth();
     const router = useRouter();
     const pathname = usePathname();
     const [businessSlug, setBusinessSlug] = useState("");
@@ -41,9 +44,7 @@ export default function DashboardSidebar() {
             {/* Logo */}
             <div className="p-6 border-b border-border">
                 <Link href="/dashboard" className="flex items-center gap-2.5">
-                    <div className="w-9 h-9 rounded-xl btn-primary flex items-center justify-center flex-shrink-0">
-                        <Star className="w-4 h-4 text-white fill-white" />
-                    </div>
+                    <img src="/logo.png" alt="ReviewHub Logo" className="w-9 h-9 object-contain" />
                     <span className="text-xl font-bold gradient-text-primary">ReviewHub</span>
                 </Link>
             </div>
@@ -53,6 +54,28 @@ export default function DashboardSidebar() {
                 <div className="mx-3 mt-3 px-3 py-2 rounded-lg bg-amber-500/10 border border-amber-500/30 flex items-center gap-2">
                     <Zap className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
                     <span className="text-xs text-amber-400 font-medium">Demo Account</span>
+                </div>
+            )}
+
+            {/* Location Selector */}
+            {availableLocations.length > 0 && (
+                <div className="mx-4 mt-5">
+                    <label className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider mb-1.5 block">Location</label>
+                    <div className="relative">
+                        <select
+                            value={activeLocation?.id || ""}
+                            onChange={(e) => {
+                                const match = availableLocations.find(l => l.id === e.target.value);
+                                if (match) setActiveLocation(match);
+                            }}
+                            className="w-full bg-secondary border border-border text-sm text-foreground rounded-xl px-3 py-2 appearance-none focus:outline-none focus:border-primary transition-colors cursor-pointer"
+                        >
+                            {availableLocations.map(loc => (
+                                <option key={loc.id} value={loc.id}>{loc.name}</option>
+                            ))}
+                        </select>
+                        <ChevronRight className="w-4 h-4 text-muted-foreground absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none rotate-90" />
+                    </div>
                 </div>
             )}
 

@@ -37,15 +37,7 @@ export function Navbar() {
                 <div className="flex h-18 items-center justify-between py-4">
                     {/* Logo */}
                     <Link href="/" className="flex items-center gap-2.5 group">
-                        <div
-                            className="w-8 h-8 rounded-lg flex items-center justify-center relative"
-                            style={{
-                                background: "linear-gradient(135deg, #6366f1, #7c3aed)",
-                                boxShadow: "0 0 20px rgba(99, 102, 241, 0.5)",
-                            }}
-                        >
-                            <Star className="h-4 w-4 text-white fill-white" />
-                        </div>
+                        <img src="/logo.png" alt="ReviewHub Logo" className="w-8 h-8 object-contain" />
                         <span
                             className="text-lg font-bold tracking-tight"
                             style={{

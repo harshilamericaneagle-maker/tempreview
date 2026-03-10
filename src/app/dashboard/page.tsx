@@ -25,7 +25,7 @@ function StarDisplay({ rating }: { rating: number }) {
 const SENTIMENT_COLORS = ["#22c55e", "#f59e0b", "#ef4444"];
 
 export default function DashboardPage() {
-    const { user } = useAuth();
+    const { user, activeLocation } = useAuth();
     const [business, setBusiness] = useState<Business | null>(null);
     const [analytics, setAnalytics] = useState<ReturnType<typeof getBusinessAnalytics> | null>(null);
     const [recent, setRecent] = useState<Review[]>([]);
@@ -39,12 +39,12 @@ export default function DashboardPage() {
         const biz = getBusinessByOwner(user.id);
         if (!biz) return;
         setBusiness(biz);
-        const stats = getBusinessAnalytics(biz.id);
+        const stats = getBusinessAnalytics(biz.id, activeLocation?.id);
         setAnalytics(stats);
-        setRecent(getReviewsByBusiness(biz.id).slice(0, 6));
+        setRecent(getReviewsByBusiness(biz.id).filter(r => !activeLocation || r.locationId === activeLocation.id).slice(0, 6));
     };
 
-    useEffect(() => { refresh(); }, [user]);
+    useEffect(() => { refresh(); }, [user, activeLocation]);
 
     const openReply = (review: Review) => {
         setReplyModal(review);

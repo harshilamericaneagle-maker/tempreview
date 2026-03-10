@@ -11,6 +11,7 @@ export interface User {
   name: string;
   role: Role;
   businessId?: string;
+  locationId?: string;
   createdAt: string;
 }
 
@@ -29,6 +30,22 @@ export interface Business {
   createdAt: string;
 }
 
+export interface Location {
+  id: string;
+  businessId: string;
+  name: string;
+  address: string;
+  createdAt: string;
+}
+
+export interface Competitor {
+  id: string;
+  businessId: string;
+  name: string;
+  currentRating: number;
+  totalReviews: number;
+}
+
 export interface Review {
   id: string;
   businessId: string;
@@ -45,6 +62,7 @@ export interface Review {
   keywords?: string[];
   isUrgent?: boolean;
   assignedTo?: string; // user ID
+  locationId?: string;
   createdAt: string;
 }
 
@@ -60,6 +78,7 @@ export interface IssueTask {
   roomNumber?: string;
   dueDate?: string;
   resolutionNote?: string;
+  locationId?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -72,6 +91,7 @@ export interface Alert {
   severity: "low" | "medium" | "high" | "critical";
   status: "active" | "acknowledged" | "resolved";
   message: string;
+  locationId?: string;
   createdAt: string;
 }
 
@@ -84,6 +104,7 @@ export interface ReviewRequestCampaign {
   templateBody: string;
   sendDelayHours: number;
   isActive: boolean;
+  locationId?: string;
   createdAt: string;
 }
 
@@ -150,6 +171,21 @@ const SEED_BUSINESSES: Business[] = [
   },
 ];
 
+const SEED_LOCATIONS: Location[] = [
+  { id: "loc-001", businessId: "biz-001", name: "Downtown Chicago", address: "123 N Michigan Ave, Chicago, IL 60601", createdAt: "2024-01-15T10:00:00Z" },
+  { id: "loc-002", businessId: "biz-001", name: "O'Hare Airport", address: "10000 W O'Hare Ave, Chicago, IL 60666", createdAt: "2024-06-15T10:00:00Z" },
+  { id: "loc-003", businessId: "biz-002", name: "Main Store", address: "456 W Lake St, Chicago, IL 60606", createdAt: "2024-02-01T10:00:00Z" },
+  { id: "loc-004", businessId: "biz-003", name: "South Loop", address: "789 S Wabash Ave, Chicago, IL 60605", createdAt: "2024-02-15T10:00:00Z" },
+  { id: "loc-005", businessId: "biz-004", name: "River North", address: "321 N Clark St, Chicago, IL 60654", createdAt: "2024-03-01T10:00:00Z" },
+];
+
+const SEED_COMPETITORS: Competitor[] = [
+  { id: "comp-001", businessId: "biz-001", name: "Le Palmer House", currentRating: 4.4, totalReviews: 1205 },
+  { id: "comp-002", businessId: "biz-001", name: "Magnificent Mile Suites", currentRating: 4.2, totalReviews: 890 },
+  { id: "comp-003", businessId: "biz-001", name: "Downtown Lodge", currentRating: 3.8, totalReviews: 450 },
+  // Just seed for biz-001 for now to demonstrate
+];
+
 const generateReviews = (): Review[] => {
   type SeedReview = Omit<Review, "id" | "source" | "isUrgent" | "assignedTo">;
   const bistroReviews: SeedReview[] = [
@@ -185,13 +221,24 @@ const generateReviews = (): Review[] => {
   const sources = ["Google", "TripAdvisor", "Expedia", "Booking.com"];
   const getRandomSource = () => sources[Math.floor(Math.random() * sources.length)];
   const all = [...bistroReviews, ...liquorReviews, ...clinicReviews];
-  return all.map((r, i) => ({
-    ...r,
-    id: `rev-${String(i + 1).padStart(3, "0")}`,
-    source: getRandomSource(),
-    isUrgent: r.rating <= 2,
-    assignedTo: undefined
-  }));
+  return all.map((r, i) => {
+    // Assign location: for biz-001 randomly assign loc-001 or loc-002, else match biz to loc
+    let locationId = undefined;
+    if (r.businessId === "biz-001") {
+      locationId = Math.random() > 0.5 ? "loc-001" : "loc-002";
+    } else if (r.businessId === "biz-002") locationId = "loc-003";
+    else if (r.businessId === "biz-003") locationId = "loc-004";
+    else if (r.businessId === "biz-004") locationId = "loc-005";
+
+    return {
+      ...r,
+      id: `rev-${String(i + 1).padStart(3, "0")}`,
+      source: getRandomSource(),
+      isUrgent: r.rating <= 2,
+      assignedTo: undefined,
+      locationId
+    };
+  });
 };
 
 const SEED_USERS: User[] = [
@@ -211,6 +258,8 @@ const KEY_REVIEWS = "rms_reviews";
 const KEY_TASKS = "rms_tasks";
 const KEY_ALERTS = "rms_alerts";
 const KEY_CAMPAIGNS = "rms_campaigns";
+const KEY_LOCATIONS = "rms_locations";
+const KEY_COMPETITORS = "rms_competitors";
 const KEY_INITIALIZED = "rms_initialized";
 
 // ============================================================
@@ -221,6 +270,8 @@ export function initStore() {
   if (localStorage.getItem(KEY_INITIALIZED)) return;
   localStorage.setItem(KEY_USERS, JSON.stringify(SEED_USERS));
   localStorage.setItem(KEY_BUSINESSES, JSON.stringify(SEED_BUSINESSES));
+  localStorage.setItem(KEY_LOCATIONS, JSON.stringify(SEED_LOCATIONS));
+  localStorage.setItem(KEY_COMPETITORS, JSON.stringify(SEED_COMPETITORS));
   localStorage.setItem(KEY_REVIEWS, JSON.stringify(generateReviews()));
   localStorage.setItem(KEY_INITIALIZED, "true");
 }
@@ -229,6 +280,57 @@ export function resetStore() {
   if (typeof window === "undefined") return;
   localStorage.removeItem(KEY_INITIALIZED);
   initStore();
+}
+
+// ============================================================
+// LOCATIONS
+// ============================================================
+export function getLocations(): Location[] {
+  if (typeof window === "undefined") return SEED_LOCATIONS;
+  return JSON.parse(localStorage.getItem(KEY_LOCATIONS) || "[]");
+}
+
+export function getLocationById(id: string): Location | undefined {
+  return getLocations().find(l => l.id === id);
+}
+
+export function getLocationsByBusiness(businessId: string): Location[] {
+  return getLocations().filter(l => l.businessId === businessId);
+}
+
+// ============================================================
+// COMPETITORS
+// ============================================================
+export function getCompetitors(): Competitor[] {
+  if (typeof window === "undefined") return SEED_COMPETITORS;
+  return JSON.parse(localStorage.getItem(KEY_COMPETITORS) || "[]");
+}
+
+export function getCompetitorsByBusiness(businessId: string): Competitor[] {
+  return getCompetitors().filter(c => c.businessId === businessId);
+}
+
+export function getCompetitorHistory(businessId: string) {
+  // Generate 6 months of mock rating history for the competitors and the business
+  const months = ["Oct", "Nov", "Dec", "Jan", "Feb", "Mar"];
+  const competitors = getCompetitorsByBusiness(businessId);
+  const myStats = getBusinessAnalytics(businessId);
+
+  return months.map((month, i) => {
+    const data: any = { name: month };
+
+    // Smooth variance logic to simulate historic improvement for the business
+    let myScore = myStats.avgRating - (5 - i) * 0.1;
+    data["You"] = Number(myScore.toFixed(1));
+
+    // Competitors fluctuate randomly slightly
+    competitors.forEach((comp, idx) => {
+      let variance = (Math.sin(i * (idx + 1)) * 0.15) - 0.05;
+      data[comp.name] = Number((comp.currentRating + variance).toFixed(1));
+    });
+
+    return data;
+  });
 }
 
 // ============================================================
@@ -259,6 +361,30 @@ export function createUser(data: Omit<User, "id" | "createdAt">): User {
   users.push(newUser);
   localStorage.setItem(KEY_USERS, JSON.stringify(users));
   return newUser;
+}
+
+export function getStaffStats(businessId: string) {
+  const allUsers = getUsers().filter(u => u.businessId === businessId);
+  const allTasks = getTasksByBusiness(businessId);
+  const allReviews = getReviewsByBusiness(businessId);
+
+  return allUsers.map(u => {
+    const tasksResolved = allTasks.filter(t => t.assignedToUserId === u.id && t.status === "resolved").length;
+    const tasksPending = allTasks.filter(t => t.assignedToUserId === u.id && t.status !== "resolved").length;
+
+    // Simulate "5-star mentions" or positive resolutions by assigning points
+    const assignedReviews = allReviews.filter(r => r.assignedTo === u.id);
+    const positiveReviewsHandled = assignedReviews.filter(r => r.rating >= 4).length;
+    const points = (tasksResolved * 10) + (positiveReviewsHandled * 25);
+
+    return {
+      user: u,
+      tasksResolved,
+      tasksPending,
+      positiveReviewsHandled,
+      points
+    };
+  }).sort((a, b) => b.points - a.points);
 }
 
 // ============================================================
@@ -346,8 +472,10 @@ export function deleteReview(reviewId: string): void {
 // ============================================================
 // ANALYTICS
 // ============================================================
-export function getBusinessAnalytics(businessId: string) {
-  const reviews = getReviewsByBusiness(businessId);
+export function getBusinessAnalytics(businessId: string, locationId?: string) {
+  let reviews = getReviewsByBusiness(businessId);
+  if (locationId) reviews = reviews.filter(r => r.locationId === locationId);
+
   const total = reviews.length;
   const avgRating = total ? parseFloat((reviews.reduce((s, r) => s + r.rating, 0) / total).toFixed(1)) : 0;
   const replied = reviews.filter(r => r.status === "replied").length;

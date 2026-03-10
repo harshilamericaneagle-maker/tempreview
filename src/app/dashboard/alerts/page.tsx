@@ -5,7 +5,7 @@ import { getBusinessByOwner, getAlertsByBusiness, updateAlertStatus, Alert, Busi
 import { Bell, AlertTriangle, ShieldAlert, CheckCircle2, ChevronRight, X } from "lucide-react";
 
 export default function AlertsPage() {
-    const { user } = useAuth();
+    const { user, activeLocation } = useAuth();
     const [business, setBusiness] = useState<Business | null>(null);
     const [alerts, setAlerts] = useState<Alert[]>([]);
 
@@ -14,10 +14,10 @@ export default function AlertsPage() {
         const biz = getBusinessByOwner(user.id);
         if (!biz) return;
         setBusiness(biz);
-        setAlerts(getAlertsByBusiness(biz.id));
+        setAlerts(getAlertsByBusiness(biz.id).filter(a => !activeLocation || a.locationId === activeLocation.id));
     };
 
-    useEffect(() => { refresh(); }, [user]);
+    useEffect(() => { refresh(); }, [user, activeLocation]);
 
     const handleAcknowledge = (id: string) => {
         updateAlertStatus(id, "acknowledged");

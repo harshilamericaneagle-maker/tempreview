@@ -61,9 +61,17 @@ export default function BusinessPage() {
     const [business, setBusiness] = useState<Business | null>(null);
     const [reviews, setReviews] = useState<Review[]>([]);
     const [showForm, setShowForm] = useState(false);
+    const [gateStep, setGateStep] = useState<"rating" | "form" | "public_links">("rating");
     const [submitted, setSubmitted] = useState(false);
     const [form, setForm] = useState({ customerName: "", customerEmail: "", rating: 0, text: "" });
     const [submitting, setSubmitting] = useState(false);
+
+    const openForm = () => {
+        setShowForm(true);
+        setGateStep("rating");
+        setSubmitted(false);
+        setForm({ customerName: "", customerEmail: "", rating: 0, text: "" });
+    };
 
     const refresh = () => {
         const biz = getBusinessBySlug(slug);
@@ -154,7 +162,7 @@ export default function BusinessPage() {
                         </div>
                     </div>
 
-                    <button onClick={() => setShowForm(true)}
+                    <button onClick={openForm}
                         className="mt-6 w-full py-3 rounded-xl btn-primary text-white font-semibold flex items-center justify-center gap-2 text-sm">
                         <Star className="w-4 h-4 fill-white" /> Write a Review
                     </button>
@@ -182,21 +190,55 @@ export default function BusinessPage() {
                             <div className="text-center py-8">
                                 <div className="text-5xl mb-4">🎉</div>
                                 <h3 className="text-xl font-bold text-white mb-2">Thank You!</h3>
-                                <p className="text-muted-foreground text-sm mb-6">Your review has been submitted successfully.</p>
-                                <button onClick={() => { setShowForm(false); setSubmitted(false); setForm({ customerName: "", customerEmail: "", rating: 0, text: "" }); }}
-                                    className="px-6 py-2.5 rounded-xl btn-primary text-white font-semibold text-sm">Done</button>
+                                <p className="text-muted-foreground text-sm mb-6">Your feedback has been received.</p>
+                                <button onClick={() => setShowForm(false)}
+                                    className="px-6 py-2.5 rounded-xl btn-primary text-white font-semibold text-sm">Close</button>
+                            </div>
+                        ) : gateStep === "rating" ? (
+                            <div className="text-center py-6">
+                                <div className="flex items-center justify-between mb-2">
+                                    <h3 className="text-lg font-bold text-white">Rate your experience</h3>
+                                    <button onClick={() => setShowForm(false)}><X className="w-5 h-5 text-muted-foreground hover:text-foreground" /></button>
+                                </div>
+                                <p className="text-muted-foreground text-sm mb-6">How was your visit to {business.name}?</p>
+                                <div className="flex justify-center mb-6">
+                                    <StarPicker value={form.rating} onChange={r => {
+                                        setForm(f => ({ ...f, rating: r }));
+                                        setTimeout(() => {
+                                            if (r >= 4) setGateStep("public_links");
+                                            else setGateStep("form");
+                                        }, 400);
+                                    }} />
+                                </div>
+                            </div>
+                        ) : gateStep === "public_links" ? (
+                            <div className="text-center py-6">
+                                <div className="flex items-center justify-end mb-2">
+                                    <button onClick={() => setShowForm(false)}><X className="w-5 h-5 text-muted-foreground hover:text-foreground" /></button>
+                                </div>
+                                <div className="text-5xl mb-4">⭐</div>
+                                <h3 className="text-xl font-bold text-white mb-2">We're so glad you enjoyed it!</h3>
+                                <p className="text-muted-foreground text-sm mb-8">Would you mind sharing your 5-star experience on Google or Yelp? It helps us out a lot!</p>
+                                <div className="flex flex-col gap-3">
+                                    <a href="#" target="_blank" className="w-full py-3 rounded-xl bg-white text-black font-semibold flex items-center justify-center gap-2 text-sm hover:bg-zinc-200 transition-colors">
+                                        <Globe className="w-4 h-4" /> Review on Google
+                                    </a>
+                                    <a href="#" target="_blank" className="w-full py-3 rounded-xl bg-red-600 text-white font-semibold flex items-center justify-center gap-2 text-sm hover:bg-red-700 transition-colors">
+                                        <Star className="w-4 h-4 fill-white" /> Review on Yelp
+                                    </a>
+                                    <button onClick={() => setGateStep("form")} className="w-full py-3 mt-4 text-muted-foreground text-xs hover:text-white transition-colors">
+                                        No thanks, I just want to leave private feedback.
+                                    </button>
+                                </div>
                             </div>
                         ) : (
                             <>
                                 <div className="flex items-center justify-between mb-5">
-                                    <h3 className="text-lg font-bold text-white">Write a Review</h3>
+                                    <h3 className="text-lg font-bold text-white">Private Feedback</h3>
                                     <button onClick={() => setShowForm(false)}><X className="w-5 h-5 text-muted-foreground hover:text-foreground" /></button>
                                 </div>
+                                <p className="text-muted-foreground text-sm mb-6">We're sorry we didn't meet your expectations. Please tell us how we can improve.</p>
                                 <form onSubmit={handleSubmit} className="space-y-4">
-                                    <div>
-                                        <label className="block text-xs font-medium text-muted-foreground mb-2">Your Rating *</label>
-                                        <StarPicker value={form.rating} onChange={r => setForm(f => ({ ...f, rating: r }))} />
-                                    </div>
                                     <div className="grid grid-cols-2 gap-3">
                                         <div>
                                             <label className="block text-xs font-medium text-muted-foreground mb-1.5">Your Name *</label>
@@ -210,15 +252,15 @@ export default function BusinessPage() {
                                         </div>
                                     </div>
                                     <div>
-                                        <label className="block text-xs font-medium text-muted-foreground mb-1.5">Your Review *</label>
+                                        <label className="block text-xs font-medium text-muted-foreground mb-1.5">Your Feedback *</label>
                                         <textarea value={form.text} onChange={e => setForm(f => ({ ...f, text: e.target.value }))} required rows={4}
-                                            placeholder="Share your experience..."
+                                            placeholder="Tell us what went wrong..."
                                             className="w-full px-3 py-2.5 rounded-xl bg-secondary/50 border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary text-sm resize-none" />
                                     </div>
-                                    <button type="submit" disabled={submitting || !form.rating || !form.customerName || !form.text}
+                                    <button type="submit" disabled={submitting || !form.customerName || !form.text}
                                         className="w-full py-3 rounded-xl btn-primary text-white font-semibold flex items-center justify-center gap-2 disabled:opacity-50 text-sm">
                                         <Send className="w-4 h-4" />
-                                        {submitting ? "Submitting..." : "Submit Review"}
+                                        {submitting ? "Submitting..." : "Send Feedback to Management"}
                                     </button>
                                 </form>
                             </>

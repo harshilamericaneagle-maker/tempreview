@@ -32,7 +32,7 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 export default function ReviewsPage() {
-    const { user } = useAuth();
+    const { user, activeLocation } = useAuth();
     const [reviews, setReviews] = useState<Review[]>([]);
     const [filtered, setFiltered] = useState<Review[]>([]);
     const [search, setSearch] = useState("");
@@ -50,14 +50,14 @@ export default function ReviewsPage() {
         if (!user) return;
         const biz = getBusinessByOwner(user.id);
         if (!biz) return;
-        const all = getReviewsByBusiness(biz.id);
+        const all = getReviewsByBusiness(biz.id).filter(r => !activeLocation || r.locationId === activeLocation.id);
         const allUsers = getUsers().map(u => ({ id: u.id, name: u.name }));
         setReviews(all);
         setFiltered(all);
         setUsers(allUsers);
     };
 
-    useEffect(() => { refresh(); }, [user]);
+    useEffect(() => { refresh(); }, [user, activeLocation]);
 
     useEffect(() => {
         let r = [...reviews];

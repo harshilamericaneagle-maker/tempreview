@@ -5,7 +5,7 @@ import { getBusinessByOwner, getTasksByBusiness, addTask, updateTaskStatus, Issu
 import { CheckCircle2, Circle, Clock, MoreHorizontal, Plus, AlertCircle } from "lucide-react";
 
 export default function TasksPage() {
-    const { user } = useAuth();
+    const { user, activeLocation } = useAuth();
     const [business, setBusiness] = useState<Business | null>(null);
     const [tasks, setTasks] = useState<IssueTask[]>([]);
     const [reviews, setReviews] = useState<Review[]>([]);
@@ -19,11 +19,11 @@ export default function TasksPage() {
         const biz = getBusinessByOwner(user.id);
         if (!biz) return;
         setBusiness(biz);
-        setTasks(getTasksByBusiness(biz.id));
-        setReviews(getReviewsByBusiness(biz.id));
+        setTasks(getTasksByBusiness(biz.id).filter(t => !activeLocation || t.locationId === activeLocation.id));
+        setReviews(getReviewsByBusiness(biz.id).filter(r => !activeLocation || r.locationId === activeLocation.id));
     };
 
-    useEffect(() => { refresh(); }, [user]);
+    useEffect(() => { refresh(); }, [user, activeLocation]);
 
     const handleCreateTask = (e: React.FormEvent) => {
         e.preventDefault();
@@ -36,6 +36,7 @@ export default function TasksPage() {
             priority: newTask.priority as any,
             status: "open",
             roomNumber: newTask.roomNumber || undefined,
+            locationId: activeLocation?.id
         });
         setShowNewTaskModal(false);
         setNewTask({ reviewId: "", department: "housekeeping", issueType: "", priority: "medium", roomNumber: "" });
