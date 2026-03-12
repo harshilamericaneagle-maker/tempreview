@@ -74,40 +74,67 @@ export default function AboutPage() {
                 description="We didn't build this from a whiteboard. We built it from frustration."
             />
 
-            <section className="container py-16 px-4 md:px-6 mx-auto space-y-24">
+            <section className="w-full py-16 px-6 lg:px-16 space-y-24">
 
-                {/* Origin Story */}
-                <div className="max-w-3xl mx-auto">
-                    <div className="flex items-center gap-3 mb-6">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
-                            <Lightbulb className="w-5 h-5 text-white" />
+                {/* Origin Story + Mission side by side */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
+                    <div>
+                        <div className="flex items-center gap-3 mb-6">
+                            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
+                                <Lightbulb className="w-5 h-5 text-white" />
+                            </div>
+                            <h2 className="text-2xl font-bold text-foreground">The Origin Story</h2>
                         </div>
-                        <h2 className="text-2xl font-bold text-foreground">The Origin Story</h2>
+                        <div className="space-y-4 text-muted-foreground leading-relaxed">
+                            <p className="text-xl font-medium text-foreground">
+                                We used to be the people sitting on the other side of this problem.
+                            </p>
+                            <p>
+                                Before Openrize, we worked in hospitality and retail — long hours, lean teams, and a constant flood of operational fires to put out.
+                            </p>
+                            <p>
+                                Then one day, the reviews piled up. Not because the service was bad — but because there simply wasn't enough time to respond. A 1-star review sat unanswered for two weeks. Then a franchise penalty came down. Then another property's rating slipped below 4.0 on Google, and the booking numbers followed.
+                            </p>
+                            <p>
+                                We were sitting in a back office at 11 PM, eyes burning, copy-pasting the same response to a dozen reviews across four platforms and thinking: <em>"There has to be a better way."</em>
+                            </p>
+                            <p>
+                                There wasn't. Not one that was affordable, focused, and built for real business owners. So we built Openrize.
+                            </p>
+                        </div>
                     </div>
-
-                    <div className="prose prose-lg dark:prose-invert max-w-none space-y-6">
-                        <p className="text-xl text-muted-foreground leading-relaxed font-medium">
-                            We used to be the people sitting on the other side of this problem. Before Openrize, we worked in hospitality and retail — long hours, lean teams, and a constant flood of operational fires to put out.
-                        </p>
-                        <p className="text-muted-foreground leading-relaxed">
-                            Then one day, the reviews piled up. Not because the service was bad — but because there simply wasn't enough time to respond. A 1-star review sat unanswered for two weeks. Then a franchise penalty came down. Then another property's rating slipped below 4.0 on Google, and the booking numbers followed.
-                        </p>
-                        <p className="text-muted-foreground leading-relaxed">
-                            We were sitting in a back office at 11 PM, eyes burning, copy-pasting the same response to a dozen reviews across four platforms — Google, TripAdvisor, Yelp, Booking.com — and thinking: <em>"There has to be a better way."</em>
-                        </p>
-                        <p className="text-muted-foreground leading-relaxed">
-                            There wasn't. Not one that was affordable, focused, and built for real business owners rather than enterprise marketing departments. So we built Openrize.
-                        </p>
+                    <div className="space-y-6">
+                        {/* Mission */}
+                        <div className="p-8 rounded-2xl border-l-4 border-primary bg-primary/5">
+                            <div className="flex items-center gap-3 mb-4">
+                                <Heart className="w-5 h-5 text-primary" />
+                                <h2 className="text-xl font-bold text-foreground">Our Mission</h2>
+                            </div>
+                            <p className="text-muted-foreground leading-relaxed italic">
+                                "To give every business owner — from a family-run motel to a multi-location restaurant group — the tools to manage their reputation effortlessly, respond to every review, and turn customer feedback into real business growth."
+                            </p>
+                        </div>
+                        {/* Timeline */}
+                        <div className="space-y-3">
+                            {milestones.map(({ year, event }) => (
+                                <div key={year} className="flex items-start gap-4 p-4 rounded-2xl border border-border bg-card">
+                                    <div className="w-14 h-8 rounded-lg bg-primary/10 border border-primary/30 flex items-center justify-center text-primary font-bold text-sm flex-shrink-0 mt-0.5">
+                                        {year}
+                                    </div>
+                                    <p className="text-muted-foreground leading-relaxed text-sm">{event}</p>
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 </div>
 
                 {/* Pain Points */}
                 <div>
-                    <div className="text-center mb-10">
-                        <h2 className="text-2xl font-bold text-foreground mb-3">The Problems We Lived Through</h2>
-                        <p className="text-muted-foreground max-w-2xl mx-auto">These aren't hypothetical pain points from customer interviews. These are problems we personally experienced — and refused to accept.</p>
+                    <div className="mb-8">
+                        <h2 className="text-2xl font-bold text-foreground mb-2">The Problems We Lived Through</h2>
+                        <p className="text-muted-foreground">These aren't hypothetical pain points from customer interviews. These are problems we personally experienced — and refused to accept.</p>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
                         {painPoints.map(({ icon: Icon, color, bg, title, desc }) => (
                             <div key={title} className={`rounded-2xl border p-6 ${bg}`}>
                                 <div className="flex items-center gap-3 mb-3">
@@ -120,43 +147,15 @@ export default function AboutPage() {
                     </div>
                 </div>
 
-                {/* Mission */}
-                <div className="max-w-3xl mx-auto">
-                    <div className="p-8 rounded-2xl border-l-4 border-primary bg-primary/5">
-                        <div className="flex items-center gap-3 mb-4">
-                            <Heart className="w-5 h-5 text-primary" />
-                            <h2 className="text-xl font-bold text-foreground">Our Mission</h2>
-                        </div>
-                        <p className="text-muted-foreground leading-relaxed italic text-lg">
-                            "To give every business owner — from a family-run motel to a multi-location restaurant group — the tools to manage their reputation effortlessly, respond to every review, and turn customer feedback into real business growth."
-                        </p>
-                    </div>
-                </div>
-
-                {/* Timeline */}
-                <div>
-                    <h2 className="text-2xl font-bold text-foreground mb-10 text-center">Our Journey</h2>
-                    <div className="max-w-2xl mx-auto space-y-4">
-                        {milestones.map(({ year, event }) => (
-                            <div key={year} className="flex items-start gap-5">
-                                <div className="w-16 h-8 rounded-lg bg-primary/10 border border-primary/30 flex items-center justify-center text-primary font-bold text-sm flex-shrink-0 mt-1">
-                                    {year}
-                                </div>
-                                <p className="text-muted-foreground leading-relaxed text-sm pt-1">{event}</p>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
                 {/* Team */}
                 <div>
-                    <div className="text-center mb-10">
-                        <h2 className="text-2xl font-bold text-foreground mb-3">The Team</h2>
-                        <p className="text-muted-foreground max-w-xl mx-auto">People who got fed up with the problem and decided to become the solution.</p>
+                    <div className="mb-8">
+                        <h2 className="text-2xl font-bold text-foreground mb-2">The Team</h2>
+                        <p className="text-muted-foreground">People who got fed up with the problem and decided to become the solution.</p>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         {team.map(({ name, role, emoji, bio }) => (
-                            <div key={name} className="rounded-2xl border border-border bg-card p-6 text-center hover:border-primary/30 transition-colors">
+                            <div key={name} className="rounded-2xl border border-border bg-card p-8 text-center hover:border-primary/30 transition-colors">
                                 <div className="text-5xl mb-4">{emoji}</div>
                                 <h3 className="font-bold text-foreground text-lg">{name}</h3>
                                 <p className="text-xs text-primary font-medium mb-3">{role}</p>
@@ -167,17 +166,19 @@ export default function AboutPage() {
                 </div>
 
                 {/* Closing CTA */}
-                <div className="max-w-2xl mx-auto text-center">
-                    <div className="flex justify-center mb-4">
-                        {[1,2,3,4,5].map(i => <Star key={i} className="w-5 h-5 fill-yellow-400 text-yellow-400" />)}
+                <div className="rounded-2xl border border-border bg-gradient-to-br from-primary/10 to-violet-600/10 p-12 flex flex-col md:flex-row items-center justify-between gap-8">
+                    <div>
+                        <div className="flex mb-3">
+                            {[1,2,3,4,5].map(i => <Star key={i} className="w-5 h-5 fill-yellow-400 text-yellow-400" />)}
+                        </div>
+                        <h2 className="text-2xl font-bold text-foreground mb-2">Join 1,500+ businesses already using Openrize</h2>
+                        <p className="text-muted-foreground">Stop losing customers to unanswered reviews. Start building the reputation your business deserves.</p>
                     </div>
-                    <h2 className="text-2xl font-bold text-foreground mb-3">Join 1,500+ businesses already using Openrize</h2>
-                    <p className="text-muted-foreground mb-6">Stop losing customers to unanswered reviews. Start building the reputation your business deserves.</p>
                     <a
                         href="/demo"
-                        className="inline-flex items-center gap-2 px-8 py-3 rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 text-white font-semibold hover:opacity-90 transition-opacity"
+                        className="inline-flex items-center gap-2 px-8 py-4 rounded-xl bg-gradient-to-r from-violet-600 to-purple-600 text-white font-bold text-base hover:opacity-90 transition-opacity whitespace-nowrap flex-shrink-0"
                     >
-                        <Users className="w-4 h-4" /> Request a Free Demo
+                        <Users className="w-5 h-5" /> Request a Free Demo
                     </a>
                 </div>
 

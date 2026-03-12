@@ -153,7 +153,6 @@ export default function BusinessPage() {
 
     const openForm = () => {
         setShowForm(true);
-        setGateStep("rating");
         setSubmitted(false);
         setForm({ customerName: "", customerEmail: "", rating: 0, text: "" });
     };
@@ -273,60 +272,41 @@ export default function BusinessPage() {
             {/* Review Form Modal */}
             {showForm && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-                    <div className="glass-card rounded-2xl p-6 w-full max-w-md border border-border">
+                    <div className="glass-card rounded-2xl p-6 w-full max-w-lg border border-border">
                         {submitted ? (
                             <div className="text-center py-8">
                                 <div className="text-5xl mb-4">🎉</div>
                                 <h3 className="text-xl font-bold text-white mb-2">Thank You!</h3>
-                                <p className="text-muted-foreground text-sm mb-6">Your feedback has been received.</p>
+                                <p className="text-muted-foreground text-sm mb-6">Your review has been submitted successfully.</p>
                                 <button onClick={() => setShowForm(false)}
                                     className="px-6 py-2.5 rounded-xl btn-primary text-white font-semibold text-sm">Close</button>
-                            </div>
-                        ) : gateStep === "rating" ? (
-                            <div className="text-center py-6">
-                                <div className="flex items-center justify-between mb-2">
-                                    <h3 className="text-lg font-bold text-white">Rate your experience</h3>
-                                    <button onClick={() => setShowForm(false)}><X className="w-5 h-5 text-muted-foreground hover:text-foreground" /></button>
-                                </div>
-                                <p className="text-muted-foreground text-sm mb-6">How was your visit to {business.name}?</p>
-                                <div className="flex justify-center mb-6">
-                                    <StarPicker value={form.rating} onChange={r => {
-                                        setForm(f => ({ ...f, rating: r }));
-                                        setTimeout(() => {
-                                            if (r >= 4) setGateStep("public_links");
-                                            else setGateStep("form");
-                                        }, 400);
-                                    }} />
-                                </div>
-                            </div>
-                        ) : gateStep === "public_links" ? (
-                            <div className="text-center py-6">
-                                <div className="flex items-center justify-end mb-2">
-                                    <button onClick={() => setShowForm(false)}><X className="w-5 h-5 text-muted-foreground hover:text-foreground" /></button>
-                                </div>
-                                <div className="text-5xl mb-4">⭐</div>
-                                <h3 className="text-xl font-bold text-white mb-2">We're so glad you enjoyed it!</h3>
-                                <p className="text-muted-foreground text-sm mb-8">Would you mind sharing your 5-star experience on Google or Yelp? It helps us out a lot!</p>
-                                <div className="flex flex-col gap-3">
-                                    <a href="#" target="_blank" className="w-full py-3 rounded-xl bg-white text-black font-semibold flex items-center justify-center gap-2 text-sm hover:bg-zinc-200 transition-colors">
-                                        <Globe className="w-4 h-4" /> Review on Google
-                                    </a>
-                                    <a href="#" target="_blank" className="w-full py-3 rounded-xl bg-red-600 text-white font-semibold flex items-center justify-center gap-2 text-sm hover:bg-red-700 transition-colors">
-                                        <Star className="w-4 h-4 fill-white" /> Review on Yelp
-                                    </a>
-                                    <button onClick={() => setGateStep("form")} className="w-full py-3 mt-4 text-muted-foreground text-xs hover:text-white transition-colors">
-                                        No thanks, I just want to leave private feedback.
-                                    </button>
-                                </div>
                             </div>
                         ) : (
                             <>
                                 <div className="flex items-center justify-between mb-5">
-                                    <h3 className="text-lg font-bold text-white">Private Feedback</h3>
+                                    <div>
+                                        <h3 className="text-lg font-bold text-white">Write a Review</h3>
+                                        <p className="text-xs text-muted-foreground mt-0.5">{business.name}</p>
+                                    </div>
                                     <button onClick={() => setShowForm(false)}><X className="w-5 h-5 text-muted-foreground hover:text-foreground" /></button>
                                 </div>
-                                <p className="text-muted-foreground text-sm mb-6">We're sorry we didn't meet your expectations. Please tell us how we can improve.</p>
+
                                 <form onSubmit={handleSubmit} className="space-y-4">
+                                    {/* Stars */}
+                                    <div>
+                                        <label className="block text-xs font-medium text-muted-foreground mb-2">Your Rating *</label>
+                                        <div className="flex items-center gap-1">
+                                            <StarPicker value={form.rating} onChange={(r: number) => setForm(f => ({ ...f, rating: r }))} />
+                                            {form.rating > 0 && (
+                                                <span className="ml-2 text-sm text-yellow-400 font-medium">
+                                                    {["Terrible", "Poor", "Okay", "Good", "Excellent!"][form.rating - 1]}
+                                                </span>
+                                            )}
+                                        </div>
+                                        {form.rating === 0 && <p className="text-xs text-muted-foreground/60 mt-1">Click a star to rate</p>}
+                                    </div>
+
+                                    {/* Name + Email */}
                                     <div className="grid grid-cols-2 gap-3">
                                         <div>
                                             <label className="block text-xs font-medium text-muted-foreground mb-1.5">Your Name *</label>
@@ -339,16 +319,19 @@ export default function BusinessPage() {
                                                 className="w-full px-3 py-2.5 rounded-xl bg-secondary/50 border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary text-sm" />
                                         </div>
                                     </div>
+
+                                    {/* Comment */}
                                     <div>
-                                        <label className="block text-xs font-medium text-muted-foreground mb-1.5">Your Feedback *</label>
+                                        <label className="block text-xs font-medium text-muted-foreground mb-1.5">Your Review *</label>
                                         <textarea value={form.text} onChange={e => setForm(f => ({ ...f, text: e.target.value }))} required rows={4}
-                                            placeholder="Tell us what went wrong..."
+                                            placeholder="Tell us about your experience — what did you love? What could be better?"
                                             className="w-full px-3 py-2.5 rounded-xl bg-secondary/50 border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary text-sm resize-none" />
                                     </div>
-                                    <button type="submit" disabled={submitting || !form.customerName || !form.text}
+
+                                    <button type="submit" disabled={submitting || !form.customerName || !form.text || form.rating === 0}
                                         className="w-full py-3 rounded-xl btn-primary text-white font-semibold flex items-center justify-center gap-2 disabled:opacity-50 text-sm">
-                                        <Send className="w-4 h-4" />
-                                        {submitting ? "Submitting..." : "Send Feedback to Management"}
+                                        <Star className="w-4 h-4 fill-white" />
+                                        {submitting ? "Submitting..." : "Submit Review"}
                                     </button>
                                 </form>
                             </>

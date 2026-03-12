@@ -86,25 +86,23 @@ export default function TrustCenterPage() {
                 description="Our commitment to your security, privacy, and data integrity."
             />
 
-            <section className="container py-16 px-4 md:px-6 mx-auto space-y-20">
+            <section className="w-full py-16 px-6 lg:px-16 space-y-20">
                 {/* Intro */}
-                <div className="max-w-3xl mx-auto text-center">
-                    <p className="text-lg text-muted-foreground leading-relaxed">
-                        At Openrize, trust is the foundation of everything we build. Over <strong className="text-foreground">1,500 businesses</strong> rely on our platform to manage their reputation and customer relationships. We take that responsibility seriously — investing continuously in the security, reliability, and transparency of our systems.
-                    </p>
-                </div>
+                <p className="text-lg text-muted-foreground leading-relaxed max-w-3xl">
+                    At Openrize, trust is the foundation of everything we build. Over <strong className="text-foreground">1,500 businesses</strong> rely on our platform to manage their reputation and customer relationships. We take that responsibility seriously — investing continuously in the security, reliability, and transparency of our systems.
+                </p>
 
                 {/* Security Pillars */}
                 <div>
-                    <h2 className="text-2xl font-bold text-foreground mb-8 text-center">Security Architecture</h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <h2 className="text-2xl font-bold text-foreground mb-8">Security Architecture</h2>
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
                         {securityPillars.map(({ icon: Icon, title, color, items }) => (
                             <div key={title} className="rounded-2xl border border-border bg-card p-6 hover:border-primary/30 transition-colors">
                                 <div className="flex items-center gap-4 mb-5">
                                     <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${color} flex items-center justify-center flex-shrink-0`}>
                                         <Icon className="w-6 h-6 text-white" />
                                     </div>
-                                    <h3 className="text-lg font-bold text-foreground">{title}</h3>
+                                    <h3 className="text-base font-bold text-foreground">{title}</h3>
                                 </div>
                                 <ul className="space-y-2.5">
                                     {items.map((item) => (
@@ -121,8 +119,8 @@ export default function TrustCenterPage() {
 
                 {/* SLA */}
                 <div>
-                    <h2 className="text-2xl font-bold text-foreground mb-8 text-center">Service Level Commitments</h2>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    <h2 className="text-2xl font-bold text-foreground mb-8">Service Level Commitments</h2>
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                         {slaItems.map(({ label, value, color }) => (
                             <div key={label} className="rounded-2xl border border-border bg-card p-5 text-center">
                                 <div className={`text-3xl font-bold mb-1 ${color}`}>{value}</div>
@@ -132,33 +130,32 @@ export default function TrustCenterPage() {
                     </div>
                 </div>
 
-                {/* Compliance */}
-                <div>
-                    <h2 className="text-2xl font-bold text-foreground mb-8 text-center">Compliance & Certifications</h2>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                        {complianceItems.map(({ label, desc }) => (
-                            <div key={label} className="rounded-2xl border border-primary/20 bg-primary/5 p-5 text-center">
-                                <Shield className="w-8 h-8 text-primary mx-auto mb-3" />
-                                <div className="font-bold text-foreground text-sm mb-1">{label}</div>
-                                <div className="text-xs text-muted-foreground">{desc}</div>
-                            </div>
-                        ))}
+                {/* Compliance + Incident Response side by side */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                    <div>
+                        <h2 className="text-2xl font-bold text-foreground mb-6">Compliance & Certifications</h2>
+                        <div className="grid grid-cols-2 gap-4">
+                            {complianceItems.map(({ label, desc }) => (
+                                <div key={label} className="rounded-2xl border border-primary/20 bg-primary/5 p-5 text-center">
+                                    <Shield className="w-8 h-8 text-primary mx-auto mb-3" />
+                                    <div className="font-bold text-foreground text-sm mb-1">{label}</div>
+                                    <div className="text-xs text-muted-foreground">{desc}</div>
+                                </div>
+                            ))}
+                        </div>
                     </div>
-                </div>
 
-                {/* Incident Response */}
-                <div>
-                    <h2 className="text-2xl font-bold text-foreground mb-8 text-center">Incident Response Process</h2>
-                    <div className="max-w-3xl mx-auto">
-                        <div className="space-y-4">
+                    <div>
+                        <h2 className="text-2xl font-bold text-foreground mb-6">Incident Response Process</h2>
+                        <div className="space-y-3">
                             {incidentSteps.map(({ step, title, desc }) => (
-                                <div key={step} className="flex items-start gap-5 p-5 rounded-2xl border border-border bg-card">
-                                    <div className="w-10 h-10 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center text-primary font-bold text-sm flex-shrink-0">
+                                <div key={step} className="flex items-start gap-4 p-4 rounded-2xl border border-border bg-card">
+                                    <div className="w-9 h-9 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center text-primary font-bold text-xs flex-shrink-0 mt-0.5">
                                         {step}
                                     </div>
                                     <div>
-                                        <h4 className="font-semibold text-foreground mb-1">{title}</h4>
-                                        <p className="text-sm text-muted-foreground">{desc}</p>
+                                        <h4 className="font-semibold text-foreground text-sm mb-0.5">{title}</h4>
+                                        <p className="text-xs text-muted-foreground">{desc}</p>
                                     </div>
                                 </div>
                             ))}
@@ -167,15 +164,17 @@ export default function TrustCenterPage() {
                 </div>
 
                 {/* Contact */}
-                <div className="max-w-2xl mx-auto text-center p-8 rounded-2xl border border-border bg-secondary/20">
-                    <AlertTriangle className="w-8 h-8 text-amber-400 mx-auto mb-3" />
-                    <h3 className="text-xl font-bold text-foreground mb-3">Report a Security Issue</h3>
-                    <p className="text-muted-foreground text-sm mb-4">
-                        If you discover a potential security vulnerability or have concerns about our data practices, please contact our security team immediately. We take all reports seriously and will respond promptly.
-                    </p>
+                <div className="p-8 rounded-2xl border border-border bg-secondary/20 flex flex-col md:flex-row items-center justify-between gap-6">
+                    <div className="flex items-center gap-4">
+                        <AlertTriangle className="w-8 h-8 text-amber-400 flex-shrink-0" />
+                        <div>
+                            <h3 className="text-xl font-bold text-foreground mb-1">Report a Security Issue</h3>
+                            <p className="text-muted-foreground text-sm">Found a vulnerability? Contact our security team immediately. We take all reports seriously.</p>
+                        </div>
+                    </div>
                     <a
                         href="mailto:openize@gmail.com"
-                        className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-primary text-white font-semibold text-sm hover:bg-primary/90 transition-colors"
+                        className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-primary text-white font-semibold text-sm hover:bg-primary/90 transition-colors whitespace-nowrap flex-shrink-0"
                     >
                         openize@gmail.com
                     </a>
