@@ -183,7 +183,8 @@ const SEED_COMPETITORS: Competitor[] = [
   { id: "comp-001", businessId: "biz-001", name: "Le Palmer House", currentRating: 4.4, totalReviews: 1205 },
   { id: "comp-002", businessId: "biz-001", name: "Magnificent Mile Suites", currentRating: 4.2, totalReviews: 890 },
   { id: "comp-003", businessId: "biz-001", name: "Downtown Lodge", currentRating: 3.8, totalReviews: 450 },
-  // Just seed for biz-001 for now to demonstrate
+  { id: "comp-004", businessId: "biz-001", name: "Marriott Downtown Chicago", currentRating: 4.5, totalReviews: 2340 },
+  { id: "comp-005", businessId: "biz-001", name: "Hilton Garden Inn Loop", currentRating: 4.3, totalReviews: 1780 },
 ];
 
 const generateReviews = (): Review[] => {
@@ -220,12 +221,17 @@ const generateReviews = (): Review[] => {
 
   const sources = ["Google", "TripAdvisor", "Expedia", "Booking.com"];
   const getRandomSource = () => sources[Math.floor(Math.random() * sources.length)];
+  // Assign some reviews to staff for leaderboard points
+  const staffAssignments: Record<number, string> = {
+    0: "user-staff-001", 2: "user-staff-002", 4: "user-staff-001",
+    6: "user-staff-003", 8: "user-staff-002", 10: "user-staff-004", 11: "user-staff-003",
+  };
   const all = [...bistroReviews, ...liquorReviews, ...clinicReviews];
   return all.map((r, i) => {
     // Assign location: for biz-001 randomly assign loc-001 or loc-002, else match biz to loc
     let locationId = undefined;
     if (r.businessId === "biz-001") {
-      locationId = Math.random() > 0.5 ? "loc-001" : "loc-002";
+      locationId = i % 3 === 0 ? "loc-002" : "loc-001";
     } else if (r.businessId === "biz-002") locationId = "loc-003";
     else if (r.businessId === "biz-003") locationId = "loc-004";
     else if (r.businessId === "biz-004") locationId = "loc-005";
@@ -235,7 +241,7 @@ const generateReviews = (): Review[] => {
       id: `rev-${String(i + 1).padStart(3, "0")}`,
       source: getRandomSource(),
       isUrgent: r.rating <= 2,
-      assignedTo: undefined,
+      assignedTo: staffAssignments[i],
       locationId
     };
   });
@@ -247,6 +253,39 @@ const SEED_USERS: User[] = [
   { id: "user-merch-002", email: "merchant2@reviewhub.com", password: "pass1234", name: "Roberto Diaz", role: "merchant", businessId: "biz-002", createdAt: "2024-02-01T00:00:00Z" },
   { id: "user-merch-003", email: "merchant3@reviewhub.com", password: "pass1234", name: "Linda Chen", role: "merchant", businessId: "biz-003", createdAt: "2024-02-15T00:00:00Z" },
   { id: "user-merch-004", email: "merchant4@reviewhub.com", password: "pass1234", name: "Omar Hassan", role: "merchant", businessId: "biz-004", createdAt: "2024-03-01T00:00:00Z" },
+  // biz-001 staff for leaderboard
+  { id: "user-staff-001", email: "jessica@stellarbistro.com", password: "pass1234", name: "Jessica Torres", role: "merchant", businessId: "biz-001", locationId: "loc-001", createdAt: "2024-04-01T00:00:00Z" },
+  { id: "user-staff-002", email: "mark@stellarbistro.com", password: "pass1234", name: "Mark Johnson", role: "merchant", businessId: "biz-001", locationId: "loc-001", createdAt: "2024-04-15T00:00:00Z" },
+  { id: "user-staff-003", email: "priya@stellarbistro.com", password: "pass1234", name: "Priya Patel", role: "merchant", businessId: "biz-001", locationId: "loc-002", createdAt: "2024-05-01T00:00:00Z" },
+  { id: "user-staff-004", email: "carlos@stellarbistro.com", password: "pass1234", name: "Carlos Mendez", role: "merchant", businessId: "biz-001", locationId: "loc-002", createdAt: "2024-05-15T00:00:00Z" },
+];
+
+// ============================================================
+// SEED TASKS
+// ============================================================
+const now = new Date();
+const daysAgo = (d: number) => new Date(now.getTime() - d * 86400000).toISOString();
+
+const SEED_TASKS: IssueTask[] = [
+  { id: "task-s001", businessId: "biz-001", reviewId: "rev-006", assignedToUserId: "user-staff-001", department: "housekeeping", issueType: "AC filter needs cleaning — room complaint", priority: "high", status: "open", roomNumber: "214", locationId: "loc-001", createdAt: daysAgo(3), updatedAt: daysAgo(3) },
+  { id: "task-s002", businessId: "biz-001", assignedToUserId: "user-staff-002", department: "maintenance", issueType: "Elevator noise reported by multiple guests", priority: "urgent", status: "in_progress", locationId: "loc-001", createdAt: daysAgo(5), updatedAt: daysAgo(2) },
+  { id: "task-s003", businessId: "biz-001", assignedToUserId: "user-staff-001", department: "front_desk", issueType: "Check-in wait time too long — streamline process", priority: "medium", status: "open", locationId: "loc-001", createdAt: daysAgo(2), updatedAt: daysAgo(2) },
+  { id: "task-s004", businessId: "biz-001", reviewId: "rev-010", assignedToUserId: "user-staff-003", department: "management", issueType: "Guest parking shortage — add valet option signage", priority: "medium", status: "in_progress", locationId: "loc-001", createdAt: daysAgo(7), updatedAt: daysAgo(1) },
+  { id: "task-s005", businessId: "biz-001", assignedToUserId: "user-staff-002", department: "housekeeping", issueType: "Deep clean pool area — slippery tiles", priority: "urgent", status: "resolved", locationId: "loc-001", resolutionNote: "Non-slip mats installed and area re-cleaned.", createdAt: daysAgo(10), updatedAt: daysAgo(4) },
+  { id: "task-s006", businessId: "biz-001", assignedToUserId: "user-staff-004", department: "front_desk", issueType: "WiFi password not communicated at check-in", priority: "low", status: "resolved", locationId: "loc-002", resolutionNote: "Added WiFi info to welcome card printed at check-in.", createdAt: daysAgo(12), updatedAt: daysAgo(6) },
+  { id: "task-s007", businessId: "biz-001", assignedToUserId: "user-staff-003", department: "maintenance", issueType: "Replace burnt-out hallway lights Floor 3", priority: "medium", status: "resolved", locationId: "loc-002", resolutionNote: "Lights replaced on all F3 corridors.", createdAt: daysAgo(8), updatedAt: daysAgo(3) },
+  { id: "task-s008", businessId: "biz-001", assignedToUserId: "user-staff-001", department: "housekeeping", issueType: "Mini-bar restocking inconsistency — room 118", priority: "low", status: "open", roomNumber: "118", locationId: "loc-001", createdAt: daysAgo(1), updatedAt: daysAgo(1) },
+];
+
+// ============================================================
+// SEED ALERTS
+// ============================================================
+const SEED_ALERTS: Alert[] = [
+  { id: "alert-s001", businessId: "biz-001", reviewId: "rev-006", alertType: "1-star-review", severity: "critical", status: "active", message: "David L. left a 1-star review: 'The pasta was overcooked and the waiter was dismissive.' — Immediate response needed.", locationId: "loc-001", createdAt: daysAgo(5) },
+  { id: "alert-s002", businessId: "biz-001", alertType: "keyword-match", severity: "high", status: "active", message: "Keyword 'disappointing' detected in 3 reviews this week — potential recurring issue with service quality.", locationId: "loc-001", createdAt: daysAgo(3) },
+  { id: "alert-s003", businessId: "biz-001", alertType: "response-rate-drop", severity: "high", status: "acknowledged", message: "Response rate dropped 12% this week to 58%. You have 7 reviews pending response for over 48 hours.", locationId: "loc-002", createdAt: daysAgo(4) },
+  { id: "alert-s004", businessId: "biz-001", alertType: "rating-drop", severity: "medium", status: "active", message: "7-day average rating at O'Hare location dipped to 3.9★ — below your 4.0★ threshold.", locationId: "loc-002", createdAt: daysAgo(2) },
+  { id: "alert-s005", businessId: "biz-001", alertType: "competitor-overtake", severity: "medium", status: "acknowledged", message: "Marriott Downtown now leads your local market at 4.5★. You are currently ranked #2 with 4.4★.", locationId: "loc-001", createdAt: daysAgo(6) },
 ];
 
 // ============================================================
@@ -260,7 +299,7 @@ const KEY_ALERTS = "rms_alerts";
 const KEY_CAMPAIGNS = "rms_campaigns";
 const KEY_LOCATIONS = "rms_locations";
 const KEY_COMPETITORS = "rms_competitors";
-const KEY_INITIALIZED = "rms_initialized";
+const KEY_INITIALIZED = "rms_initialized_v2";
 
 // ============================================================
 // INIT
@@ -273,6 +312,8 @@ export function initStore() {
   localStorage.setItem(KEY_LOCATIONS, JSON.stringify(SEED_LOCATIONS));
   localStorage.setItem(KEY_COMPETITORS, JSON.stringify(SEED_COMPETITORS));
   localStorage.setItem(KEY_REVIEWS, JSON.stringify(generateReviews()));
+  localStorage.setItem(KEY_TASKS, JSON.stringify(SEED_TASKS));
+  localStorage.setItem(KEY_ALERTS, JSON.stringify(SEED_ALERTS));
   localStorage.setItem(KEY_INITIALIZED, "true");
 }
 

@@ -56,6 +56,91 @@ function ReviewCard({ review }: { review: Review }) {
     );
 }
 
+function InlineFeedbackBox({ business, onSubmitted }: { business: Business; onSubmitted: () => void }) {
+    const [fbName, setFbName] = useState("");
+    const [fbEmail, setFbEmail] = useState("");
+    const [fbMsg, setFbMsg] = useState("");
+    const [fbSubmitting, setFbSubmitting] = useState(false);
+    const [fbDone, setFbDone] = useState(false);
+
+    const handleFbSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!fbName.trim() || !fbMsg.trim()) return;
+        setFbSubmitting(true);
+        setTimeout(() => {
+            addReview({
+                businessId: business.id,
+                customerName: fbName.trim(),
+                customerEmail: fbEmail.trim() || undefined,
+                rating: 3,
+                text: fbMsg.trim(),
+                source: "Direct Feedback",
+            });
+            setFbDone(true);
+            setFbSubmitting(false);
+            onSubmitted();
+        }, 600);
+    };
+
+    return (
+        <div className="glass-card rounded-2xl p-6 border border-border mt-8">
+            <div className="flex items-center gap-3 mb-5">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center flex-shrink-0">
+                    <Send className="w-4 h-4 text-white" />
+                </div>
+                <div>
+                    <h3 className="font-bold text-white text-base">Share Your Feedback</h3>
+                    <p className="text-xs text-muted-foreground">Sent directly to management — not published publicly</p>
+                </div>
+            </div>
+
+            {fbDone ? (
+                <div className="text-center py-6">
+                    <div className="text-4xl mb-3">✅</div>
+                    <p className="text-white font-semibold mb-1">Feedback Received!</p>
+                    <p className="text-sm text-muted-foreground">Thank you for helping {business.name} improve.</p>
+                </div>
+            ) : (
+                <form onSubmit={handleFbSubmit} className="space-y-4">
+                    <div className="grid grid-cols-2 gap-3">
+                        <div>
+                            <label className="block text-xs font-medium text-muted-foreground mb-1.5">Your Name *</label>
+                            <input
+                                value={fbName} onChange={e => setFbName(e.target.value)} required
+                                placeholder="Jane Smith"
+                                className="w-full px-3 py-2.5 rounded-xl bg-secondary/50 border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary text-sm"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-medium text-muted-foreground mb-1.5">Email (optional)</label>
+                            <input
+                                type="email" value={fbEmail} onChange={e => setFbEmail(e.target.value)}
+                                placeholder="you@email.com"
+                                className="w-full px-3 py-2.5 rounded-xl bg-secondary/50 border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary text-sm"
+                            />
+                        </div>
+                    </div>
+                    <div>
+                        <label className="block text-xs font-medium text-muted-foreground mb-1.5">Your Message *</label>
+                        <textarea
+                            value={fbMsg} onChange={e => setFbMsg(e.target.value)} required rows={4}
+                            placeholder="Tell us about your experience, suggestions, or anything you'd like management to know..."
+                            className="w-full px-3 py-2.5 rounded-xl bg-secondary/50 border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary text-sm resize-none"
+                        />
+                    </div>
+                    <button
+                        type="submit" disabled={fbSubmitting || !fbName.trim() || !fbMsg.trim()}
+                        className="w-full py-3 rounded-xl btn-primary text-white font-semibold flex items-center justify-center gap-2 disabled:opacity-50 text-sm"
+                    >
+                        <Send className="w-4 h-4" />
+                        {fbSubmitting ? "Sending..." : "Send to Management"}
+                    </button>
+                </form>
+            )}
+        </div>
+    );
+}
+
 export default function BusinessPage() {
     const { slug } = useParams<{ slug: string }>();
     const [business, setBusiness] = useState<Business | null>(null);
@@ -180,6 +265,9 @@ export default function BusinessPage() {
                         reviews.map(r => <ReviewCard key={r.id} review={r} />)
                     )}
                 </div>
+
+                {/* Inline Feedback Box */}
+                <InlineFeedbackBox business={business} onSubmitted={refresh} />
             </div>
 
             {/* Review Form Modal */}
