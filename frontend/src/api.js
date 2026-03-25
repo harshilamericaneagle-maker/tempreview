@@ -1,23 +1,18 @@
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'
+const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:5000'
 
 async function request(path, options = {}) {
-  const token = localStorage.getItem('accessToken')
-  const headers = {
-    'Content-Type': 'application/json',
-    ...(options.headers || {}),
-  }
-
-  if (token) {
-    headers.Authorization = `Bearer ${token}`
-  }
-
   const response = await fetch(`${API_BASE}${path}`, {
+    headers: {
+      'Content-Type': 'application/json',
+      ...(options.headers || {}),
+    },
     ...options,
-    headers,
   })
 
   const contentType = response.headers.get('content-type') || ''
-  const data = contentType.includes('application/json') ? await response.json() : await response.text()
+  const data = contentType.includes('application/json')
+    ? await response.json()
+    : await response.text()
 
   if (!response.ok) {
     throw new Error(data.message || 'Request failed')
