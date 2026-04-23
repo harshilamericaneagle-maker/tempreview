@@ -16,7 +16,7 @@ import {
 
 const NAV = [
   { href: "/admin", icon: LayoutDashboard, label: "Overview" },
-  { href: "/admin/merchants", icon: Building2, label: "Merchants" },
+  { href: "/admin/tenants", icon: Building2, label: "Tenants" },
   { href: "/admin/customers", icon: Users, label: "Customers" },
   { href: "/admin/reviews", icon: Star, label: "All Reviews" },
 ];
@@ -89,7 +89,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   useEffect(() => {
     if (!loading && !user) router.push("/login");
-    if (!loading && user && user.role !== "admin") router.push("/dashboard");
+    if (!loading && user && user.role !== "super_admin") router.push("/app");
   }, [user, loading, router]);
 
   if (loading || !user)

@@ -58,11 +58,19 @@ export default function AnalyticsPage() {
   return (
     <div className="h-screen overflow-y-auto">
       <div className="p-8">
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-white">Analytics</h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            Deep dive into your review performance
-          </p>
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-white">Analytics</h1>
+            <p className="text-muted-foreground text-sm mt-1">
+              Deep dive into your review performance
+            </p>
+          </div>
+          <a
+            href="/api/analytics/export.csv"
+            className="px-4 py-2 rounded-xl bg-primary text-white text-sm font-semibold hover:bg-primary/90"
+          >
+            Export CSV
+          </a>
         </div>
 
         {/* KPI Row */}

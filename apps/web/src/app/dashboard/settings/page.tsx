@@ -29,6 +29,7 @@ export default function SettingsPage() {
   });
   const [saved, setSaved] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [billingMessage, setBillingMessage] = useState("");
 
   useEffect(() => {
     if (!user) return;
@@ -68,6 +69,38 @@ export default function SettingsPage() {
     navigator.clipboard.writeText(publicUrl);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const startCheckout = async (plan: "starter" | "pro" | "business") => {
+    const res = await fetch("/api/billing/checkout", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ plan }),
+    });
+    const json = (await res.json()) as {
+      ok: boolean;
+      data?: { url?: string };
+      error?: { message?: string };
+    };
+    if (json.ok && json.data?.url) {
+      window.location.href = json.data.url;
+      return;
+    }
+    setBillingMessage(json.error?.message ?? "Unable to start checkout.");
+  };
+
+  const openPortal = async () => {
+    const res = await fetch("/api/billing/portal", { method: "POST" });
+    const json = (await res.json()) as {
+      ok: boolean;
+      data?: { url?: string };
+      error?: { message?: string };
+    };
+    if (json.ok && json.data?.url) {
+      window.location.href = json.data.url;
+      return;
+    }
+    setBillingMessage(json.error?.message ?? "Unable to open billing portal.");
   };
 
   return (
@@ -191,6 +224,40 @@ export default function SettingsPage() {
               {saved ? "Saved!" : "Save Changes"}
             </button>
           </form>
+        </div>
+
+        <div className="glass-card rounded-2xl p-6 mt-6">
+          <h2 className="text-sm font-semibold text-foreground mb-4">Billing</h2>
+          <p className="text-xs text-muted-foreground mb-4">
+            Upgrade your plan or manage payment methods in Stripe.
+          </p>
+          <div className="flex gap-2 flex-wrap">
+            <button
+              onClick={() => startCheckout("starter")}
+              className="px-3 py-2 rounded-lg bg-secondary border border-border text-xs"
+            >
+              Upgrade to Starter
+            </button>
+            <button
+              onClick={() => startCheckout("pro")}
+              className="px-3 py-2 rounded-lg bg-secondary border border-border text-xs"
+            >
+              Upgrade to Pro
+            </button>
+            <button
+              onClick={() => startCheckout("business")}
+              className="px-3 py-2 rounded-lg bg-secondary border border-border text-xs"
+            >
+              Upgrade to Business
+            </button>
+            <button
+              onClick={openPortal}
+              className="px-3 py-2 rounded-lg bg-primary/10 border border-primary/20 text-primary text-xs"
+            >
+              Open Billing Portal
+            </button>
+          </div>
+          {billingMessage && <p className="text-xs text-amber-300 mt-3">{billingMessage}</p>}
         </div>
       </div>
     </div>
