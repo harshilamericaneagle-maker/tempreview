@@ -87,6 +87,7 @@ export async function GET(req: Request) {
       provider: r.provider,
       rating: r.rating,
       body: r.body,
+      topics: r.topics,
       authorName: r.authorName,
       sentiment: r.sentiment,
       status: r.status,
