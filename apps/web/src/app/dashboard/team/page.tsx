@@ -1,29 +1,37 @@
 "use client";
-import { useAuth } from "@/lib/auth";
+
 import { useEffect, useState } from "react";
-import { getBusinessByOwner, getStaffStats, Business } from "@/lib/store";
-import { Trophy, Medal, Star, CheckCircle2, TrendingUp, Users } from "lucide-react";
+import { Trophy, Medal, Star, CheckCircle2, Users } from "lucide-react";
+
+type TeamStat = {
+  user: {
+    id: string;
+    name: string | null;
+    role: string;
+  };
+  tasksResolved: number;
+  tasksPending: number;
+  positiveReviewsHandled: number;
+  points: number;
+};
 
 export default function TeamLeaderboardPage() {
-  const { user, activeLocation } = useAuth();
-  const [business, setBusiness] = useState<Business | null>(null);
-  const [stats, setStats] = useState<ReturnType<typeof getStaffStats>>([]);
+  const [stats, setStats] = useState<TeamStat[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const refresh = () => {
-    if (!user) return;
-    const biz = getBusinessByOwner(user.id);
-    if (!biz) return;
-    setBusiness(biz);
-
-    // Fetch all staff stats. In a real app, we might filter by location if staff are location-bound.
-    setStats(getStaffStats(biz.id));
+  const refresh = async () => {
+    setLoading(true);
+    const res = await fetch("/api/team/stats");
+    const json = (await res.json()) as { ok: boolean; data: TeamStat[] };
+    if (json.ok) setStats(json.data);
+    setLoading(false);
   };
 
   useEffect(() => {
-    refresh();
-  }, [user, activeLocation]);
+    void refresh();
+  }, []);
 
-  if (!business) {
+  if (loading) {
     return (
       <div className="flex items-center justify-center p-12">
         <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
@@ -32,9 +40,9 @@ export default function TeamLeaderboardPage() {
   }
 
   const topRankColors = [
-    "text-yellow-400 bg-yellow-400/10 border-yellow-400/30", // 1st: Gold
-    "text-slate-300 bg-slate-300/10 border-slate-300/30", // 2nd: Silver
-    "text-amber-600 bg-amber-600/10 border-amber-600/30", // 3rd: Bronze
+    "text-yellow-400 bg-yellow-400/10 border-yellow-400/30",
+    "text-slate-300 bg-slate-300/10 border-slate-300/30",
+    "text-amber-600 bg-amber-600/10 border-amber-600/30",
   ];
 
   return (
@@ -48,7 +56,6 @@ export default function TeamLeaderboardPage() {
         </div>
       </div>
 
-      {/* Quick Stats Banner */}
       <div className="grid grid-cols-3 gap-4 mb-8">
         <div className="glass-card p-5 rounded-2xl flex items-center gap-4">
           <div className="w-12 h-12 rounded-full bg-emerald-500/10 flex flex-shrink-0 items-center justify-center border border-emerald-500/20">
@@ -66,7 +73,7 @@ export default function TeamLeaderboardPage() {
             <Star className="w-6 h-6 text-blue-400" />
           </div>
           <div>
-            <p className="text-sm font-medium text-muted-foreground">5★ Reviews Handled</p>
+            <p className="text-sm font-medium text-muted-foreground">4-5★ Reviews Handled</p>
             <p className="text-2xl font-bold text-white">
               {stats.reduce((acc, s) => acc + s.positiveReviewsHandled, 0)}
             </p>
@@ -83,7 +90,6 @@ export default function TeamLeaderboardPage() {
         </div>
       </div>
 
-      {/* Leaderboard Table/Cards */}
       {stats.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground">
           No staff members found. Invite your team in Settings.
@@ -97,7 +103,6 @@ export default function TeamLeaderboardPage() {
             <div className="col-span-2 text-center">Tasks Resolved</div>
             <div className="col-span-3 text-center">Positive Guest Mentions</div>
           </div>
-
           <div className="divide-y divide-border/50">
             {stats.map((stat, i) => {
               const rankStyle =
@@ -121,21 +126,18 @@ export default function TeamLeaderboardPage() {
                     </div>
                   </div>
                   <div className="col-span-4 flex flex-col">
-                    <span className="font-bold text-white text-sm">{stat.user.name}</span>
+                    <span className="font-bold text-white text-sm">
+                      {stat.user.name ?? "Team Member"}
+                    </span>
                     <span className="text-xs text-muted-foreground">{stat.user.role}</span>
                   </div>
                   <div className="col-span-2 text-center">
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded bg-primary/10 text-primary font-bold text-sm border border-primary/20 hover:scale-105 transition-transform">
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded bg-primary/10 text-primary font-bold text-sm border border-primary/20">
                       {stat.points} pt
                     </span>
                   </div>
                   <div className="col-span-2 text-center text-sm font-medium text-white">
                     {stat.tasksResolved}
-                    {stat.tasksPending > 0 && (
-                      <span className="text-xs text-muted-foreground ml-1">
-                        ({stat.tasksPending} limit)
-                      </span>
-                    )}
                   </div>
                   <div className="col-span-3 text-center text-sm text-white flex items-center justify-center gap-1.5">
                     <Star className="w-3.5 h-3.5 text-blue-400 fill-blue-400" />
