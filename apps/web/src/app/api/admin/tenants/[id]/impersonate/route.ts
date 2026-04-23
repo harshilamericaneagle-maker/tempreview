@@ -32,5 +32,13 @@ export async function POST(_req: Request, { params }: { params: { id: string } }
     { expiresIn: "15m" },
   );
 
-  return NextResponse.json({ ok: true, data: { token } });
+  const response = NextResponse.json({ ok: true, data: { token } });
+  response.cookies.set("rh_impersonation", token, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: env.APP_URL.startsWith("https://"),
+    path: "/",
+    maxAge: 60 * 15,
+  });
+  return response;
 }

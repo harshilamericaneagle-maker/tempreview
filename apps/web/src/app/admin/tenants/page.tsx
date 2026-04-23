@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 
 type TenantRow = {
   id: string;
@@ -14,9 +15,9 @@ type TenantRow = {
 };
 
 export default function AdminTenantsPage() {
+  const router = useRouter();
   const [tenants, setTenants] = useState<TenantRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [impersonationToken, setImpersonationToken] = useState("");
 
   const load = async () => {
     setLoading(true);
@@ -39,8 +40,8 @@ export default function AdminTenantsPage() {
 
   const impersonate = async (id: string) => {
     const res = await fetch(`/api/admin/tenants/${id}/impersonate`, { method: "POST" });
-    const json = (await res.json()) as { ok: boolean; data?: { token: string } };
-    if (json.ok && json.data?.token) setImpersonationToken(json.data.token);
+    const json = (await res.json()) as { ok: boolean };
+    if (json.ok) router.push("/app");
   };
 
   return (
@@ -49,12 +50,6 @@ export default function AdminTenantsPage() {
         <h1 className="text-2xl font-bold text-white">Tenants</h1>
         <p className="text-sm text-muted-foreground">MRR: ${totalMrr.toFixed(2)} / month</p>
       </div>
-
-      {impersonationToken && (
-        <div className="mb-4 rounded-xl border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-300 break-all">
-          Impersonation token (15m): {impersonationToken}
-        </div>
-      )}
 
       <div className="glass-card rounded-2xl p-4">
         {loading ? (
