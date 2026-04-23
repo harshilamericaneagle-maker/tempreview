@@ -1,13 +1,7 @@
 "use client";
+
 import { useAuth } from "@/lib/auth";
-import { useEffect, useState } from "react";
-import {
-  getBusinessByOwner,
-  getCompetitorsByBusiness,
-  getCompetitorHistory,
-  Business,
-  Competitor,
-} from "@/lib/store";
+import { useEffect, useMemo, useState } from "react";
 import {
   LineChart,
   Line,
@@ -20,28 +14,31 @@ import {
 } from "recharts";
 import { TrendingUp, Crosshair, Star } from "lucide-react";
 
+type Competitor = { id: string; name: string };
+type BenchmarkData = {
+  focus: { id: string; name: string };
+  competitors: Competitor[];
+  history: Array<Record<string, string | number>>;
+};
+
 const COLORS = ["#6366f1", "#ef4444", "#f59e0b", "#10b981", "#8b5cf6"];
 
 export default function CompetitorsPage() {
-  const { user } = useAuth();
-  const [business, setBusiness] = useState<Business | null>(null);
-  const [competitors, setCompetitors] = useState<Competitor[]>([]);
-  const [history, setHistory] = useState<any[]>([]);
-
-  const refresh = () => {
-    if (!user) return;
-    const biz = getBusinessByOwner(user.id);
-    if (!biz) return;
-    setBusiness(biz);
-    setCompetitors(getCompetitorsByBusiness(biz.id));
-    setHistory(getCompetitorHistory(biz.id));
-  };
+  const { activeLocation } = useAuth();
+  const [data, setData] = useState<BenchmarkData | null>(null);
 
   useEffect(() => {
-    refresh();
-  }, [user]);
+    const load = async () => {
+      const params = new URLSearchParams();
+      if (activeLocation?.id) params.set("locationId", activeLocation.id);
+      const res = await fetch(`/api/competitors/benchmark?${params.toString()}`);
+      const json = (await res.json()) as { ok: boolean; data: BenchmarkData };
+      if (json.ok) setData(json.data);
+    };
+    void load();
+  }, [activeLocation]);
 
-  if (!business) {
+  if (!data) {
     return (
       <div className="flex items-center justify-center p-12">
         <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
@@ -49,6 +46,7 @@ export default function CompetitorsPage() {
     );
   }
 
+  const { competitors, history } = data;
   if (competitors.length === 0) {
     return (
       <div className="p-8 h-screen overflow-y-auto">
@@ -56,27 +54,22 @@ export default function CompetitorsPage() {
           <div>
             <h1 className="text-2xl font-bold text-white mb-1">Competitor Benchmarking</h1>
             <p className="text-muted-foreground text-sm">
-              Compare your reputation against local rivals.
+              Compare your location against sibling locations in this tenant.
             </p>
           </div>
         </div>
         <div className="glass-card rounded-2xl p-12 text-center text-muted-foreground">
-          No competitors found for this business. Setup competitors in Settings.
+          Add more locations to unlock benchmark comparisons.
         </div>
       </div>
     );
   }
 
-  // Determine current rank
-  const myCurrentScore = history.length > 0 ? history[history.length - 1]["You"] : 0;
+  const last = history[history.length - 1] ?? {};
   const allScores = [
-    { name: "You", score: myCurrentScore },
-    ...competitors.map((c) => ({
-      name: c.name,
-      score: history[history.length - 1]?.[c.name] || 0,
-    })),
-  ];
-  allScores.sort((a, b) => b.score - a.score);
+    { name: "You", score: Number(last.You ?? 0) },
+    ...competitors.map((c) => ({ name: c.name, score: Number(last[c.name] ?? 0) })),
+  ].sort((a, b) => b.score - a.score);
   const myRank = allScores.findIndex((s) => s.name === "You") + 1;
 
   return (
@@ -85,7 +78,7 @@ export default function CompetitorsPage() {
         <div>
           <h1 className="text-2xl font-bold text-white mb-1">Competitor Benchmarking</h1>
           <p className="text-muted-foreground text-sm">
-            Compare your reputation against local rivals over the last 6 months.
+            Compare your reputation against peer locations over the last 6 months.
           </p>
         </div>
       </div>

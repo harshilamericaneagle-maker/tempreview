@@ -1,9 +1,20 @@
 "use client";
+
 import { useAuth } from "@/lib/auth";
 import { useEffect, useState } from "react";
-import { getBusinessByOwner, getReviewsByBusiness } from "@/lib/store";
-import { generateInsights, AIInsight } from "@/lib/ai-analysis";
 import { TrendingUp, TrendingDown, Minus, CheckCircle, Circle } from "lucide-react";
+
+type AIInsight = {
+  id: string;
+  icon: string;
+  title: string;
+  description: string;
+  category: string;
+  priority: "high" | "medium" | "low";
+  trend: "up" | "down" | "stable";
+  basedOnCount: number;
+  actionItems: string[];
+};
 
 const PRIORITY_STYLES = {
   high: "bg-red-500/10 text-red-400 border-red-500/30",
@@ -12,19 +23,20 @@ const PRIORITY_STYLES = {
 };
 
 export default function AIInsightsPage() {
-  const { user, activeLocation } = useAuth();
+  const { activeLocation } = useAuth();
   const [insights, setInsights] = useState<AIInsight[]>([]);
   const [actioned, setActioned] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    if (!user) return;
-    const biz = getBusinessByOwner(user.id);
-    if (!biz) return;
-    const reviews = getReviewsByBusiness(biz.id).filter(
-      (r) => !activeLocation || r.locationId === activeLocation.id,
-    );
-    setInsights(generateInsights(reviews));
-  }, [user, activeLocation]);
+    const load = async () => {
+      const params = new URLSearchParams();
+      if (activeLocation?.id) params.set("locationId", activeLocation.id);
+      const res = await fetch(`/api/ai/insights?${params.toString()}`);
+      const json = (await res.json()) as { ok: boolean; data: AIInsight[] };
+      if (json.ok) setInsights(json.data);
+    };
+    void load();
+  }, [activeLocation]);
 
   const toggleActioned = (id: string) => {
     setActioned((prev) => {
@@ -48,7 +60,7 @@ export default function AIInsightsPage() {
             <h1 className="text-2xl font-bold text-white">AI Insights</h1>
           </div>
           <p className="text-muted-foreground text-sm">
-            Actionable suggestions generated from your customer feedback
+            Actionable suggestions generated from your live review data
           </p>
         </div>
 
@@ -116,11 +128,7 @@ export default function AIInsightsPage() {
                                 </div>
                                 <button
                                   onClick={() => toggleActioned(insight.id)}
-                                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs border transition-colors flex-shrink-0 ${
-                                    done
-                                      ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
-                                      : "bg-secondary/50 text-muted-foreground border-border hover:border-primary/30 hover:text-foreground"
-                                  }`}
+                                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs border transition-colors flex-shrink-0 ${done ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" : "bg-secondary/50 text-muted-foreground border-border hover:border-primary/30 hover:text-foreground"}`}
                                 >
                                   {done ? (
                                     <CheckCircle className="w-3.5 h-3.5" />
@@ -130,11 +138,9 @@ export default function AIInsightsPage() {
                                   {done ? "Actioned" : "Mark as Actioned"}
                                 </button>
                               </div>
-
                               <p className="text-sm text-muted-foreground mb-4">
                                 {insight.description}
                               </p>
-
                               <div>
                                 <p className="text-xs font-semibold text-foreground mb-2">
                                   Action Items:

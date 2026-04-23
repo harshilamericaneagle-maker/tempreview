@@ -1,38 +1,69 @@
 "use client";
-import { useAuth } from "@/lib/auth";
-import { useEffect, useState } from "react";
-import { getBusinessByOwner, Business } from "@/lib/store";
+
+import { useEffect, useMemo, useState } from "react";
 import { Blocks, CheckCircle2, Webhook, KeyRound, AlertCircle, RefreshCw } from "lucide-react";
 
-const INTEGRATIONS = [
-  { id: "pms-opera", name: "Oracle Opera PMS", category: "Enterprise PMS", active: false },
-  { id: "pms-cloudbeds", name: "Cloudbeds", category: "Hospitality Cloud", active: true },
-  { id: "pms-mews", name: "Mews", category: "Modern PMS", active: false },
-  { id: "pms-guesty", name: "Guesty", category: "Short Term Rentals", active: false },
-  { id: "pos-toast", name: "Toast POS", category: "Restaurant POS", active: false },
-  { id: "pos-square", name: "Square", category: "Retail POS", active: false },
-];
+type IntegrationItem = {
+  id: string;
+  provider: "google" | "yelp" | "facebook";
+  status: "connected" | "error" | "disconnected";
+  location: { id: string; name: string };
+};
+type Location = { id: string; name: string; slug: string };
 
 export default function IntegrationsPage() {
-  const { user } = useAuth();
-  const [business, setBusiness] = useState<Business | null>(null);
-  const [integrations, setIntegrations] = useState(INTEGRATIONS);
+  const [locations, setLocations] = useState<Location[]>([]);
+  const [integrations, setIntegrations] = useState<IntegrationItem[]>([]);
   const [simulating, setSimulating] = useState(false);
   const [simMessage, setSimMessage] = useState<string | null>(null);
 
-  const refresh = () => {
-    if (!user) return;
-    const biz = getBusinessByOwner(user.id);
-    if (!biz) return;
-    setBusiness(biz);
+  const refresh = async () => {
+    const [locRes, intRes] = await Promise.all([
+      fetch("/api/locations"),
+      fetch("/api/integrations"),
+    ]);
+    const locJson = (await locRes.json()) as { ok: boolean; data: Location[] };
+    const intJson = (await intRes.json()) as { ok: boolean; data: IntegrationItem[] };
+    if (locJson.ok) setLocations(locJson.data);
+    if (intJson.ok) setIntegrations(intJson.data);
   };
 
   useEffect(() => {
-    refresh();
-  }, [user]);
+    void refresh();
+  }, []);
 
-  const handleToggle = (id: string, current: boolean) => {
-    setIntegrations((prev) => prev.map((i) => (i.id === id ? { ...i, active: !current } : i)));
+  const providerCards = useMemo(
+    () =>
+      [
+        { id: "google", name: "Google Business", category: "Reviews + Reply Sync" },
+        { id: "yelp", name: "Yelp", category: "Review Ingestion" },
+        { id: "facebook", name: "Facebook", category: "Recommendations Sync" },
+      ].map((provider) => {
+        const existing = integrations.find((i) => i.provider === provider.id);
+        return { ...provider, existing };
+      }),
+    [integrations],
+  );
+
+  const handleToggle = async (provider: "google" | "yelp" | "facebook", connected: boolean) => {
+    if (connected) {
+      const existing = integrations.find((i) => i.provider === provider);
+      if (!existing) return;
+      await fetch(`/api/integrations/${existing.id}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "disconnected" }),
+      });
+    } else {
+      const location = locations[0];
+      if (!location) return;
+      await fetch("/api/integrations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ locationId: location.id, provider, status: "connected" }),
+      });
+    }
+    await refresh();
   };
 
   const simulateCheckout = () => {
@@ -40,20 +71,10 @@ export default function IntegrationsPage() {
     setSimMessage(null);
     setTimeout(() => {
       setSimulating(false);
-      setSimMessage(
-        "Successfully received Webhook: Guest 'John Doe' checked out. Automation trigger queued!",
-      );
+      setSimMessage("Webhook accepted: checkout event queued for campaign delivery.");
       setTimeout(() => setSimMessage(null), 5000);
     }, 1200);
   };
-
-  if (!business) {
-    return (
-      <div className="flex items-center justify-center p-12">
-        <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
-      </div>
-    );
-  }
 
   return (
     <div className="p-8 h-screen overflow-y-auto">
@@ -61,12 +82,11 @@ export default function IntegrationsPage() {
         <div>
           <h1 className="text-2xl font-bold text-white mb-1">App Integrations</h1>
           <p className="text-muted-foreground text-sm">
-            Connect your Property Management or Point of Sale systems to automate review requests.
+            Connect your sources to sync and respond to real reviews.
           </p>
         </div>
       </div>
 
-      {/* Simulation Card */}
       <div className="glass-card rounded-2xl p-6 border border-primary/30 mb-8 bg-primary/5">
         <div className="flex gap-4 items-start">
           <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
@@ -77,8 +97,8 @@ export default function IntegrationsPage() {
               Developer Sandbox: Simulate Checkout Payload
             </h3>
             <p className="text-muted-foreground text-sm max-w-2xl mb-4">
-              Test the webhook pipeline without leaving the dashboard. Clicking the button below
-              will simulate a checkout event payload arriving from your connected PMS.
+              Validate webhook flow from the dashboard. This simulates a checkout trigger for
+              campaign automation.
             </p>
 
             {simMessage ? (
@@ -104,50 +124,60 @@ export default function IntegrationsPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-        {integrations.map((integ) => (
-          <div
-            key={integ.id}
-            className="glass-card rounded-2xl p-6 border border-border flex flex-col items-start transition-all hover:bg-white/5"
-          >
-            <div className="flex w-full items-start justify-between mb-4">
-              <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center border border-border">
-                <Blocks className="w-6 h-6 text-muted-foreground" />
+        {providerCards.map((integ) => {
+          const connected = integ.existing?.status === "connected";
+          return (
+            <div
+              key={integ.id}
+              className="glass-card rounded-2xl p-6 border border-border flex flex-col items-start transition-all hover:bg-white/5"
+            >
+              <div className="flex w-full items-start justify-between mb-4">
+                <div className="w-12 h-12 rounded-xl bg-secondary flex items-center justify-center border border-border">
+                  <Blocks className="w-6 h-6 text-muted-foreground" />
+                </div>
+                <span
+                  className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                    connected
+                      ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                      : "bg-secondary text-muted-foreground"
+                  }`}
+                >
+                  {connected ? "Connected" : "Disconnected"}
+                </span>
               </div>
-              <span
-                className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${integ.active ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20" : "bg-secondary text-muted-foreground"}`}
-              >
-                {integ.active ? "Connected" : "Disconnected"}
-              </span>
-            </div>
-            <h3 className="text-lg font-bold text-white mb-1">{integ.name}</h3>
-            <p className="text-sm text-muted-foreground mb-6">{integ.category}</p>
-
-            <div className="mt-auto w-full pt-4 border-t border-border/50 flex">
-              {integ.active ? (
-                <button
-                  onClick={() => handleToggle(integ.id, integ.active)}
-                  className="w-full py-2.5 rounded-xl text-sm font-medium border border-border bg-secondary hover:bg-secondary/50 transition-colors text-white"
-                >
-                  Configure Settings
-                </button>
-              ) : (
-                <button
-                  onClick={() => handleToggle(integ.id, integ.active)}
-                  className="w-full py-2.5 rounded-xl text-sm font-bold bg-primary text-white hover:bg-primary/90 transition-colors flex items-center justify-center gap-2"
-                >
-                  <KeyRound className="w-4 h-4" /> Connect App
-                </button>
+              <h3 className="text-lg font-bold text-white mb-1">{integ.name}</h3>
+              <p className="text-sm text-muted-foreground mb-2">{integ.category}</p>
+              {integ.existing?.location?.name && (
+                <p className="text-xs text-muted-foreground mb-4">
+                  Location: {integ.existing.location.name}
+                </p>
               )}
+
+              <div className="mt-auto w-full pt-4 border-t border-border/50 flex">
+                <button
+                  onClick={() =>
+                    void handleToggle(integ.id as "google" | "yelp" | "facebook", connected)
+                  }
+                  className={`w-full py-2.5 rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2 ${
+                    connected
+                      ? "border border-border bg-secondary hover:bg-secondary/50 text-white"
+                      : "bg-primary text-white hover:bg-primary/90"
+                  }`}
+                >
+                  {!connected && <KeyRound className="w-4 h-4" />}
+                  {connected ? "Disconnect" : "Connect App"}
+                </button>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       <div className="mt-8 flex items-start gap-3 p-4 rounded-xl bg-secondary/30 border border-border">
         <AlertCircle className="w-5 h-5 text-muted-foreground flex-shrink-0 mt-0.5" />
         <p className="text-sm text-muted-foreground">
-          Don't see your software listed? We also offer an open API and Zapier integration for
-          custom connections. Contact support or visit the Developer Portal.
+          Need a custom source? Use the API/webhook ingestion path and create an integration entry
+          per location.
         </p>
       </div>
     </div>
