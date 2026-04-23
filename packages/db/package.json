@@ -9,13 +9,23 @@
     "lint": "eslint src --ext .ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "db:migrate": "echo \"db:migrate not implemented yet\"",
-    "db:seed": "echo \"db:seed not implemented yet\"",
-    "db:reset": "echo \"db:reset not implemented yet\""
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:seed": "tsx prisma/seed.ts",
+    "db:reset": "prisma migrate reset --force"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.17.1",
+    "bcryptjs": "^3.0.3"
   },
   "devDependencies": {
     "@reviewhub/tsconfig": "workspace:*",
+    "prisma": "^6.17.1",
+    "tsx": "^4.20.6",
     "typescript": "^5.9.3",
     "vitest": "^3.2.4"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
   }
 }
