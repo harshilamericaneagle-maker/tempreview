@@ -1,64 +1,39 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState } from "react";
-import { User, authenticate, initStore, Location, getLocationsByBusiness } from "./store";
+import { signIn, signOut, useSession } from "next-auth/react";
 
 interface AuthContextType {
-  user: User | null;
+  user: {
+    id: string;
+    email: string;
+    name: string;
+    role: string;
+    tenantId: string | null;
+  } | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
-  activeLocation: Location | null;
-  setActiveLocation: (loc: Location | null) => void;
-  availableLocations: Location[];
+  activeLocation: { id: string; name: string } | null;
+  setActiveLocation: (loc: { id: string; name: string } | null) => void;
+  availableLocations: { id: string; name: string }[];
 }
+
+type AppLocation = { id: string; name: string };
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [activeLocation, setActiveLocation] = useState<Location | null>(null);
-  const [availableLocations, setAvailableLocations] = useState<Location[]>([]);
+  const { data: session, status } = useSession();
+  const [activeLocation, setActiveLocation] = useState<AppLocation | null>(null);
+  const [availableLocations, setAvailableLocations] = useState<AppLocation[]>([]);
 
   useEffect(() => {
-    initStore();
-    const saved = sessionStorage.getItem("rms_current_user");
-    if (saved) {
-      try {
-        const pUser = JSON.parse(saved);
-        setUser(pUser);
-      } catch {
-        /* ignore */
-      }
-    }
-    setLoading(false);
-  }, []);
+    setAvailableLocations([]);
+    setActiveLocation(null);
+  }, [session?.user?.tenantId]);
 
-  useEffect(() => {
-    if (user && user.businessId) {
-      const locs = getLocationsByBusiness(user.businessId);
-      setAvailableLocations(locs);
-      if (locs.length > 0) {
-        // If they have a pref in storage, try to use it
-        const savedLoc = sessionStorage.getItem("rms_active_location");
-        if (savedLoc) {
-          const parsed = JSON.parse(savedLoc);
-          const match = locs.find((l) => l.id === parsed.id);
-          setActiveLocation(match || locs[0]);
-        } else {
-          setActiveLocation(locs[0]);
-        }
-      } else {
-        setActiveLocation(null);
-      }
-    } else {
-      setAvailableLocations([]);
-      setActiveLocation(null);
-    }
-  }, [user]);
-
-  const handleSetActiveLocation = (loc: Location | null) => {
+  const handleSetActiveLocation = (loc: AppLocation | null) => {
     setActiveLocation(loc);
     if (loc) {
       sessionStorage.setItem("rms_active_location", JSON.stringify(loc));
@@ -68,28 +43,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const login = async (email: string, password: string) => {
-    const found = authenticate(email, password);
-    if (found) {
-      setUser(found);
-      sessionStorage.setItem("rms_current_user", JSON.stringify(found));
+    const result = await signIn("credentials", {
+      redirect: false,
+      email,
+      password,
+    });
+
+    if (!result?.error) {
       return { success: true };
     }
+
     return { success: false, error: "Invalid email or password" };
   };
 
   const logout = () => {
-    setUser(null);
     setActiveLocation(null);
     setAvailableLocations([]);
-    sessionStorage.removeItem("rms_current_user");
-    sessionStorage.removeItem("rms_active_location");
+    void signOut({ callbackUrl: "/login" });
   };
+
+  const user = session?.user
+    ? {
+        id: session.user.id,
+        email: session.user.email,
+        name: session.user.name,
+        role: session.user.role,
+        tenantId: session.user.tenantId,
+      }
+    : null;
 
   return (
     <AuthContext.Provider
       value={{
         user,
-        loading,
+        loading: status === "loading",
         login,
         logout,
         activeLocation,

@@ -44,10 +44,9 @@ export default function DashboardSidebar() {
   const [businessSlug, setBusinessSlug] = useState("");
 
   useEffect(() => {
-    if (user?.businessId) {
-      const biz = getBusinessByOwner(user.id);
-      if (biz) setBusinessSlug(biz.slug);
-    }
+    if (!user) return;
+    const biz = getBusinessByOwner(user.id);
+    if (biz) setBusinessSlug(biz.slug);
   }, [user]);
 
   const handleLogout = () => {

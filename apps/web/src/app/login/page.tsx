@@ -23,9 +23,8 @@ export default function LoginPage() {
     const result = await login(em, pw);
     setLoading(false);
     if (result.success) {
-      const u = JSON.parse(sessionStorage.getItem("rms_current_user") || "{}");
-      if (u.role === "admin") router.push("/admin");
-      else router.push("/dashboard");
+      if (em === "admin@reviewhub.com") router.push("/admin");
+      else router.push("/app");
     } else {
       setError(result.error || "Login failed");
     }
@@ -106,6 +105,11 @@ export default function LoginPage() {
             >
               {loading ? "Signing in..." : "Sign In"}
             </button>
+            <div className="text-right">
+              <Link href="/forgot" className="text-xs text-primary hover:text-primary/80">
+                Forgot password?
+              </Link>
+            </div>
           </form>
 
           <div className="my-6 flex items-center gap-3">
@@ -116,7 +120,7 @@ export default function LoginPage() {
 
           {/* Demo Login */}
           <button
-            onClick={() => handleLogin(null as any, "demo@reviewhub.com", "demo1234")}
+            onClick={(e) => handleLogin(e, "demo@reviewhub.com", "demo1234")}
             className="w-full py-3 rounded-xl border border-amber-500/40 bg-amber-500/10 text-amber-400 font-semibold text-sm hover:bg-amber-500/20 transition-all flex items-center justify-center gap-2 mb-3"
           >
             <Zap className="w-4 h-4" />

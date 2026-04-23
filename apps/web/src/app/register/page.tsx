@@ -1,22 +1,22 @@
 "use client";
+
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Star, Building2 } from "lucide-react";
-import { createUser, saveBusiness, getBusinesses } from "@/lib/store";
+import { Building2, Star } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 
 const CATEGORIES = [
-  "Restaurant",
-  "Retail",
-  "Liquor Store",
-  "Clinic",
-  "Salon",
-  "Hotel",
-  "Gym",
-  "Cafe",
-  "Other",
-];
+  "restaurant",
+  "retail",
+  "liquor",
+  "clinic",
+  "salon",
+  "hotel",
+  "gym",
+  "cafe",
+  "other",
+] as const;
 
 export default function RegisterPage() {
   const { login } = useAuth();
@@ -26,7 +26,7 @@ export default function RegisterPage() {
   const [form, setForm] = useState({
     name: "",
     businessName: "",
-    category: "Restaurant",
+    category: "restaurant",
     email: "",
     password: "",
     phone: "",
@@ -42,39 +42,38 @@ export default function RegisterPage() {
     setError("");
 
     try {
-      const slug = form.businessName
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/(^-|-$)/g, "");
-      const bizId = `biz-${Date.now()}`;
-
-      const user = createUser({
-        email: form.email,
-        password: form.password,
-        name: form.name,
-        role: "merchant",
-        businessId: bizId,
+      const response = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ownerName: form.name,
+          tenantName: form.businessName,
+          category: form.category,
+          email: form.email,
+          password: form.password,
+          phone: form.phone || null,
+          address: form.address || null,
+        }),
       });
 
-      saveBusiness({
-        id: bizId,
-        slug,
-        name: form.businessName,
-        category: form.category,
-        description: "",
-        phone: form.phone,
-        website: "",
-        address: form.address,
-        logo: "🏪",
-        ownerId: user.id,
-        status: "active",
-        createdAt: new Date().toISOString(),
-      });
+      const payload = (await response.json()) as {
+        ok: boolean;
+        error?: { message?: string };
+      };
 
-      await login(form.email, form.password);
-      router.push("/dashboard");
-    } catch {
-      setError("Registration failed. Please try again.");
+      if (!response.ok || !payload.ok) {
+        throw new Error(payload.error?.message || "Registration failed.");
+      }
+
+      const result = await login(form.email, form.password);
+      if (!result.success) {
+        throw new Error("Account created but sign in failed. Please sign in manually.");
+      }
+
+      router.push("/app");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Registration failed. Please try again.";
+      setError(message);
       setLoading(false);
     }
   };
@@ -82,10 +81,6 @@ export default function RegisterPage() {
   return (
     <div className="min-h-screen flex items-center justify-center relative overflow-hidden py-12">
       <div className="absolute inset-0 mesh-gradient" />
-      <div
-        className="absolute top-1/4 right-1/4 w-96 h-96 rounded-full blur-3xl opacity-15"
-        style={{ background: "radial-gradient(circle, #7c3aed, transparent)" }}
-      />
 
       <div className="relative z-10 w-full max-w-lg px-4">
         <div className="text-center mb-8">
@@ -108,98 +103,67 @@ export default function RegisterPage() {
 
           <form onSubmit={handleRegister} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1.5">
-                  Your Name
-                </label>
-                <input
-                  value={form.name}
-                  onChange={set("name")}
-                  placeholder="Jane Smith"
-                  required
-                  className="w-full px-4 py-3 rounded-xl bg-secondary/50 border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary transition-colors text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1.5">
-                  Business Name
-                </label>
-                <input
-                  value={form.businessName}
-                  onChange={set("businessName")}
-                  placeholder="My Awesome Cafe"
-                  required
-                  className="w-full px-4 py-3 rounded-xl bg-secondary/50 border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary transition-colors text-sm"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">
-                Business Category
-              </label>
-              <select
-                value={form.category}
-                onChange={set("category")}
-                className="w-full px-4 py-3 rounded-xl bg-secondary/50 border border-border text-foreground focus:outline-none focus:border-primary transition-colors text-sm"
-              >
-                {CATEGORIES.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">
-                Email Address
-              </label>
               <input
-                type="email"
-                value={form.email}
-                onChange={set("email")}
-                placeholder="you@business.com"
+                value={form.name}
+                onChange={set("name")}
+                placeholder="Your Name"
                 required
-                className="w-full px-4 py-3 rounded-xl bg-secondary/50 border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary transition-colors text-sm"
+                className="w-full px-4 py-3 rounded-xl bg-secondary/50 border border-border text-sm"
+              />
+              <input
+                value={form.businessName}
+                onChange={set("businessName")}
+                placeholder="Business Name"
+                required
+                className="w-full px-4 py-3 rounded-xl bg-secondary/50 border border-border text-sm"
               />
             </div>
+
+            <select
+              value={form.category}
+              onChange={set("category")}
+              className="w-full px-4 py-3 rounded-xl bg-secondary/50 border border-border text-sm"
+            >
+              {CATEGORIES.map((c) => (
+                <option key={c} value={c}>
+                  {c[0].toUpperCase() + c.slice(1)}
+                </option>
+              ))}
+            </select>
+
+            <input
+              type="email"
+              value={form.email}
+              onChange={set("email")}
+              placeholder="Email Address"
+              required
+              className="w-full px-4 py-3 rounded-xl bg-secondary/50 border border-border text-sm"
+            />
 
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1.5">Password</label>
-                <input
-                  type="password"
-                  value={form.password}
-                  onChange={set("password")}
-                  placeholder="••••••••"
-                  required
-                  minLength={6}
-                  className="w-full px-4 py-3 rounded-xl bg-secondary/50 border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary transition-colors text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-foreground mb-1.5">Phone</label>
-                <input
-                  value={form.phone}
-                  onChange={set("phone")}
-                  placeholder="(312) 555-0100"
-                  className="w-full px-4 py-3 rounded-xl bg-secondary/50 border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary transition-colors text-sm"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">
-                Business Address
-              </label>
               <input
-                value={form.address}
-                onChange={set("address")}
-                placeholder="123 Main St, Chicago, IL 60601"
-                className="w-full px-4 py-3 rounded-xl bg-secondary/50 border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary transition-colors text-sm"
+                type="password"
+                value={form.password}
+                onChange={set("password")}
+                placeholder="Password"
+                required
+                minLength={8}
+                className="w-full px-4 py-3 rounded-xl bg-secondary/50 border border-border text-sm"
+              />
+              <input
+                value={form.phone}
+                onChange={set("phone")}
+                placeholder="Phone"
+                className="w-full px-4 py-3 rounded-xl bg-secondary/50 border border-border text-sm"
               />
             </div>
+
+            <input
+              value={form.address}
+              onChange={set("address")}
+              placeholder="Business Address"
+              className="w-full px-4 py-3 rounded-xl bg-secondary/50 border border-border text-sm"
+            />
 
             <button
               type="submit"
