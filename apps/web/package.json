@@ -11,6 +11,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@reviewhub/ai": "workspace:*",
     "@reviewhub/config": "workspace:*",
     "@reviewhub/db": "workspace:*",
     "@auth/prisma-adapter": "^2.11.1",
