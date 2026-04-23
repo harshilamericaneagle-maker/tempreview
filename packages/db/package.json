@@ -1,0 +1,21 @@
+{
+  "name": "@reviewhub/db",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "lint": "eslint src --ext .ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "db:migrate": "echo \"db:migrate not implemented yet\"",
+    "db:seed": "echo \"db:seed not implemented yet\"",
+    "db:reset": "echo \"db:reset not implemented yet\""
+  },
+  "devDependencies": {
+    "@reviewhub/tsconfig": "workspace:*",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "extends": "@reviewhub/tsconfig/base.json",
+  "compilerOptions": {
+    "rootDir": "src"
+  },
+  "include": ["src/**/*.ts"]
+}
