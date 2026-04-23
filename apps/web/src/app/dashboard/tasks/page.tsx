@@ -1,85 +1,50 @@
 "use client";
+
 import { useAuth } from "@/lib/auth";
 import { useEffect, useState } from "react";
-import {
-  getBusinessByOwner,
-  getTasksByBusiness,
-  addTask,
-  updateTaskStatus,
-  IssueTask,
-  Business,
-  getReviewsByBusiness,
-  Review,
-} from "@/lib/store";
-import { CheckCircle2, Circle, Clock, MoreHorizontal, Plus, AlertCircle } from "lucide-react";
+import { CheckCircle2, Circle, Clock, AlertCircle } from "lucide-react";
+
+type ReviewTask = {
+  id: string;
+  rating: number;
+  body: string;
+  authorName: string;
+  status: "new" | "read" | "flagged" | "resolved";
+  postedAt: string;
+  locationName: string;
+};
 
 export default function TasksPage() {
-  const { user, activeLocation } = useAuth();
-  const [business, setBusiness] = useState<Business | null>(null);
-  const [tasks, setTasks] = useState<IssueTask[]>([]);
-  const [reviews, setReviews] = useState<Review[]>([]);
-  const [showNewTaskModal, setShowNewTaskModal] = useState(false);
+  const { activeLocation } = useAuth();
+  const [tasks, setTasks] = useState<ReviewTask[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // New task form state
-  const [newTask, setNewTask] = useState({
-    reviewId: "",
-    department: "housekeeping",
-    issueType: "",
-    priority: "medium",
-    roomNumber: "",
-  });
-
-  const refresh = () => {
-    if (!user) return;
-    const biz = getBusinessByOwner(user.id);
-    if (!biz) return;
-    setBusiness(biz);
-    setTasks(
-      getTasksByBusiness(biz.id).filter(
-        (t) => !activeLocation || t.locationId === activeLocation.id,
-      ),
-    );
-    setReviews(
-      getReviewsByBusiness(biz.id).filter(
-        (r) => !activeLocation || r.locationId === activeLocation.id,
-      ),
-    );
+  const refresh = async () => {
+    setLoading(true);
+    const params = new URLSearchParams();
+    if (activeLocation?.id) params.set("locationId", activeLocation.id);
+    const res = await fetch(`/api/reviews?${params.toString()}`);
+    const json = (await res.json()) as { ok: boolean; data: ReviewTask[] };
+    if (json.ok) {
+      setTasks(json.data.filter((r) => r.rating <= 3 || r.status === "flagged"));
+    }
+    setLoading(false);
   };
 
   useEffect(() => {
-    refresh();
-  }, [user, activeLocation]);
+    void refresh();
+  }, [activeLocation]);
 
-  const handleCreateTask = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!business) return;
-    addTask({
-      businessId: business.id,
-      reviewId: newTask.reviewId || undefined,
-      department: newTask.department as any,
-      issueType: newTask.issueType,
-      priority: newTask.priority as any,
-      status: "open",
-      roomNumber: newTask.roomNumber || undefined,
-      locationId: activeLocation?.id,
+  const handleStatusChange = async (reviewId: string, nextStatus: ReviewTask["status"]) => {
+    await fetch(`/api/reviews/${reviewId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: nextStatus }),
     });
-    setShowNewTaskModal(false);
-    setNewTask({
-      reviewId: "",
-      department: "housekeeping",
-      issueType: "",
-      priority: "medium",
-      roomNumber: "",
-    });
-    refresh();
+    await refresh();
   };
 
-  const handleStatusChange = (taskId: string, newStatus: IssueTask["status"]) => {
-    updateTaskStatus(taskId, newStatus);
-    refresh();
-  };
-
-  if (!business) {
+  if (loading) {
     return (
       <div className="flex items-center justify-center p-12">
         <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
@@ -89,13 +54,13 @@ export default function TasksPage() {
 
   const columns = [
     {
-      id: "open",
+      id: "new",
       title: "Open Issues",
       color: "border-blue-500/30 bg-blue-500/5",
       icon: AlertCircle,
     },
     {
-      id: "in_progress",
+      id: "flagged",
       title: "In Progress",
       color: "border-amber-500/30 bg-amber-500/5",
       icon: Clock,
@@ -108,14 +73,18 @@ export default function TasksPage() {
     },
   ] as const;
 
+  const getPriority = (rating: number) => {
+    if (rating <= 1) return "urgent";
+    if (rating === 2) return "high";
+    return "medium";
+  };
+
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case "urgent":
         return "text-red-400 bg-red-400/10 border-red-400/20";
       case "high":
         return "text-orange-400 bg-orange-400/10 border-orange-400/20";
-      case "low":
-        return "text-blue-400 bg-blue-400/10 border-blue-400/20";
       default:
         return "text-purple-400 bg-purple-400/10 border-purple-400/20";
     }
@@ -123,26 +92,21 @@ export default function TasksPage() {
 
   return (
     <div className="p-8 h-screen overflow-hidden flex flex-col">
-      <div className="flex items-center justify-between mb-8 flex-shrink-0">
-        <div>
-          <h1 className="text-2xl font-bold text-white mb-1">Action Tracker</h1>
-          <p className="text-muted-foreground text-sm">
-            Track operational fixes derived from guest reviews.
-          </p>
-        </div>
-        <button
-          onClick={() => setShowNewTaskModal(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl text-sm font-medium hover:bg-primary/90 transition-colors"
-        >
-          <Plus className="w-4 h-4" />
-          New Task
-        </button>
+      <div className="mb-8 flex-shrink-0">
+        <h1 className="text-2xl font-bold text-white mb-1">Action Tracker</h1>
+        <p className="text-muted-foreground text-sm">
+          Live operational queue generated from low-rated and flagged reviews.
+        </p>
       </div>
 
       <div className="flex-1 overflow-x-auto">
         <div className="flex gap-6 h-full pb-8 min-w-[900px]">
           {columns.map((col) => {
-            const colTasks = tasks.filter((t) => t.status === col.id);
+            const colTasks = tasks.filter((t) => {
+              if (col.id === "new") return t.status === "new" || t.status === "read";
+              return t.status === col.id;
+            });
+
             return (
               <div key={col.id} className="flex-1 flex flex-col min-w-[300px]">
                 <div
@@ -162,68 +126,57 @@ export default function TasksPage() {
                       No tasks
                     </div>
                   ) : (
-                    colTasks.map((task) => (
-                      <div
-                        key={task.id}
-                        className="glass-card rounded-xl p-4 border border-border/50 hover:border-primary/30 transition-colors group"
-                      >
-                        <div className="flex items-start justify-between mb-2">
-                          <span
-                            className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-full border ${getPriorityColor(task.priority)}`}
-                          >
-                            {task.priority}
-                          </span>
-                          <div className="flex gap-1 relative opacity-0 group-hover:opacity-100 transition-opacity">
-                            {col.id !== "open" && (
-                              <button
-                                onClick={() => handleStatusChange(task.id, "open")}
-                                className="p-1 hover:bg-secondary rounded text-muted-foreground hover:text-white"
-                              >
-                                <Circle className="w-3.5 h-3.5" />
-                              </button>
-                            )}
-                            {col.id !== "in_progress" && (
-                              <button
-                                onClick={() => handleStatusChange(task.id, "in_progress")}
-                                className="p-1 hover:bg-secondary rounded text-muted-foreground hover:text-white"
-                              >
-                                <Clock className="w-3.5 h-3.5" />
-                              </button>
-                            )}
-                            {col.id !== "resolved" && (
-                              <button
-                                onClick={() => handleStatusChange(task.id, "resolved")}
-                                className="p-1 hover:bg-secondary rounded text-muted-foreground hover:text-white"
-                              >
-                                <CheckCircle2 className="w-3.5 h-3.5" />
-                              </button>
-                            )}
+                    colTasks.map((task) => {
+                      const priority = getPriority(task.rating);
+                      return (
+                        <div
+                          key={task.id}
+                          className="glass-card rounded-xl p-4 border border-border/50 hover:border-primary/30 transition-colors group"
+                        >
+                          <div className="flex items-start justify-between mb-2">
+                            <span
+                              className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-full border ${getPriorityColor(priority)}`}
+                            >
+                              {priority}
+                            </span>
+                            <div className="flex gap-1 relative opacity-0 group-hover:opacity-100 transition-opacity">
+                              {col.id !== "new" && (
+                                <button
+                                  onClick={() => void handleStatusChange(task.id, "new")}
+                                  className="p-1 hover:bg-secondary rounded text-muted-foreground hover:text-white"
+                                >
+                                  <Circle className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+                              {col.id !== "flagged" && (
+                                <button
+                                  onClick={() => void handleStatusChange(task.id, "flagged")}
+                                  className="p-1 hover:bg-secondary rounded text-muted-foreground hover:text-white"
+                                >
+                                  <Clock className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+                              {col.id !== "resolved" && (
+                                <button
+                                  onClick={() => void handleStatusChange(task.id, "resolved")}
+                                  className="p-1 hover:bg-secondary rounded text-muted-foreground hover:text-white"
+                                >
+                                  <CheckCircle2 className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                          <h4 className="text-sm font-medium text-white mb-1">{task.authorName}</h4>
+                          <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
+                            {task.body}
+                          </p>
+                          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                            <span>{task.rating}★</span>
+                            <span>{task.locationName}</span>
                           </div>
                         </div>
-                        <h4 className="text-sm font-medium text-white mb-1">{task.issueType}</h4>
-                        <div className="flex items-center gap-3 text-xs text-muted-foreground mb-3">
-                          <span className="capitalize">{task.department.replace("_", " ")}</span>
-                          {task.roomNumber && (
-                            <span className="bg-white/5 px-2 py-0.5 rounded">
-                              Room {task.roomNumber}
-                            </span>
-                          )}
-                        </div>
-                        {task.reviewId && (
-                          <div className="pt-3 border-t border-border/50">
-                            <span className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
-                              Linked Review
-                            </span>
-                            <p className="text-xs text-foreground/80 mt-1 line-clamp-1 italic">
-                              "
-                              {reviews.find((r) => r.id === task.reviewId)?.text ||
-                                "Deleted Review"}
-                              "
-                            </p>
-                          </div>
-                        )}
-                      </div>
-                    ))
+                      );
+                    })
                   )}
                 </div>
               </div>
@@ -231,117 +184,6 @@ export default function TasksPage() {
           })}
         </div>
       </div>
-
-      {/* Modal */}
-      {showNewTaskModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <form
-            onSubmit={handleCreateTask}
-            className="glass-card rounded-2xl p-6 w-full max-w-md border border-border"
-          >
-            <h3 className="text-lg font-bold text-white mb-4">Create New Task</h3>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-xs font-medium text-muted-foreground mb-1">
-                  Issue Description
-                </label>
-                <input
-                  required
-                  value={newTask.issueType}
-                  onChange={(e) => setNewTask({ ...newTask, issueType: e.target.value })}
-                  type="text"
-                  placeholder="e.g. Clean AC filter"
-                  className="w-full px-4 py-2.5 rounded-xl bg-secondary/50 border border-border focus:border-primary focus:outline-none text-sm"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-medium text-muted-foreground mb-1">
-                    Department
-                  </label>
-                  <select
-                    value={newTask.department}
-                    onChange={(e) => setNewTask({ ...newTask, department: e.target.value })}
-                    className="w-full px-4 py-2.5 rounded-xl bg-secondary/50 border border-border text-sm"
-                  >
-                    <option value="housekeeping">Housekeeping</option>
-                    <option value="maintenance">Maintenance</option>
-                    <option value="front_desk">Front Desk</option>
-                    <option value="management">Management</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-muted-foreground mb-1">
-                    Priority
-                  </label>
-                  <select
-                    value={newTask.priority}
-                    onChange={(e) => setNewTask({ ...newTask, priority: e.target.value })}
-                    className="w-full px-4 py-2.5 rounded-xl bg-secondary/50 border border-border text-sm"
-                  >
-                    <option value="low">Low</option>
-                    <option value="medium">Medium</option>
-                    <option value="high">High</option>
-                    <option value="urgent">Urgent</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-medium text-muted-foreground mb-1">
-                    Room / Area (Optional)
-                  </label>
-                  <input
-                    value={newTask.roomNumber}
-                    onChange={(e) => setNewTask({ ...newTask, roomNumber: e.target.value })}
-                    type="text"
-                    placeholder="e.g. 112"
-                    className="w-full px-4 py-2.5 rounded-xl bg-secondary/50 border border-border text-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-muted-foreground mb-1">
-                    Link Review (Optional)
-                  </label>
-                  <select
-                    value={newTask.reviewId}
-                    onChange={(e) => setNewTask({ ...newTask, reviewId: e.target.value })}
-                    className="w-full px-4 py-2.5 rounded-xl bg-secondary/50 border border-border text-sm max-w-[200px] truncate"
-                  >
-                    <option value="">None</option>
-                    {reviews
-                      .filter((r) => r.rating <= 3)
-                      .map((r) => (
-                        <option key={r.id} value={r.id}>
-                          {r.customerName} - {r.rating}★
-                        </option>
-                      ))}
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end gap-3 mt-8">
-              <button
-                type="button"
-                onClick={() => setShowNewTaskModal(false)}
-                className="px-5 py-2.5 rounded-xl text-sm font-medium text-muted-foreground hover:text-foreground"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="px-5 py-2.5 rounded-xl bg-primary text-white text-sm font-bold hover:bg-primary/90"
-              >
-                Create Task
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
     </div>
   );
 }

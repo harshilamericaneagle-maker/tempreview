@@ -1,47 +1,92 @@
 "use client";
+
 import { useAuth } from "@/lib/auth";
-import { useEffect, useState } from "react";
-import {
-  getBusinessByOwner,
-  getAlertsByBusiness,
-  updateAlertStatus,
-  Alert,
-  Business,
-} from "@/lib/store";
-import { Bell, AlertTriangle, ShieldAlert, CheckCircle2, ChevronRight, X } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Bell, AlertTriangle, ShieldAlert, CheckCircle2 } from "lucide-react";
+
+type ReviewItem = {
+  id: string;
+  rating: number;
+  body: string;
+  sentiment: "positive" | "neutral" | "negative" | null;
+  status: "new" | "read" | "flagged" | "resolved";
+  postedAt: string;
+  locationName: string;
+};
+
+type AlertItem = {
+  id: string;
+  severity: "critical" | "high" | "medium";
+  alertType: string;
+  message: string;
+  status: "active" | "acknowledged";
+  createdAt: string;
+  reviewId: string;
+};
 
 export default function AlertsPage() {
-  const { user, activeLocation } = useAuth();
-  const [business, setBusiness] = useState<Business | null>(null);
-  const [alerts, setAlerts] = useState<Alert[]>([]);
+  const { activeLocation } = useAuth();
+  const [reviews, setReviews] = useState<ReviewItem[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const refresh = () => {
-    if (!user) return;
-    const biz = getBusinessByOwner(user.id);
-    if (!biz) return;
-    setBusiness(biz);
-    setAlerts(
-      getAlertsByBusiness(biz.id).filter(
-        (a) => !activeLocation || a.locationId === activeLocation.id,
-      ),
-    );
+  const refresh = async () => {
+    setLoading(true);
+    const params = new URLSearchParams();
+    if (activeLocation?.id) params.set("locationId", activeLocation.id);
+    const res = await fetch(`/api/reviews?${params.toString()}`);
+    const json = (await res.json()) as { ok: boolean; data: ReviewItem[] };
+    if (json.ok) setReviews(json.data);
+    setLoading(false);
   };
 
   useEffect(() => {
-    refresh();
-  }, [user, activeLocation]);
+    void refresh();
+  }, [activeLocation]);
 
-  const handleAcknowledge = (id: string) => {
-    updateAlertStatus(id, "acknowledged");
-    refresh();
+  const alerts = useMemo<AlertItem[]>(() => {
+    return reviews
+      .filter((r) => r.rating <= 2 || r.sentiment === "negative" || r.status === "flagged")
+      .map((r) => {
+        const severity: AlertItem["severity"] =
+          r.rating <= 1 ? "critical" : r.rating === 2 || r.status === "flagged" ? "high" : "medium";
+        const alertType =
+          r.status === "flagged"
+            ? "Flagged Review"
+            : r.rating <= 2
+              ? "Low Rating Review"
+              : "Negative Sentiment";
+        const status: AlertItem["status"] = r.status === "read" ? "acknowledged" : "active";
+        return {
+          id: `alert-${r.id}`,
+          severity,
+          alertType,
+          message: `${r.locationName}: ${r.body}`,
+          status,
+          createdAt: r.postedAt,
+          reviewId: r.id,
+        };
+      });
+  }, [reviews]);
+
+  const handleAcknowledge = async (reviewId: string) => {
+    await fetch(`/api/reviews/${reviewId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "read" }),
+    });
+    await refresh();
   };
 
-  const handleResolve = (id: string) => {
-    updateAlertStatus(id, "resolved");
-    refresh();
+  const handleResolve = async (reviewId: string) => {
+    await fetch(`/api/reviews/${reviewId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "resolved" }),
+    });
+    await refresh();
   };
 
-  if (!business) {
+  if (loading) {
     return (
       <div className="flex items-center justify-center p-12">
         <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
@@ -52,7 +97,7 @@ export default function AlertsPage() {
   const activeAlerts = alerts.filter((a) => a.status === "active");
   const acknowledgedAlerts = alerts.filter((a) => a.status === "acknowledged");
 
-  const getSeverityDetails = (severity: string) => {
+  const getSeverityDetails = (severity: AlertItem["severity"]) => {
     switch (severity) {
       case "critical":
         return {
@@ -84,7 +129,7 @@ export default function AlertsPage() {
         <div>
           <h1 className="text-2xl font-bold text-white mb-1">Alerts & Escalation</h1>
           <p className="text-muted-foreground text-sm">
-            Monitor urgent issues and negative sentiment triggers.
+            Live incident feed from negative, low-rated, and flagged reviews.
           </p>
         </div>
       </div>
@@ -96,13 +141,11 @@ export default function AlertsPage() {
           </div>
           <h3 className="text-lg font-bold text-white mb-2">All Clear!</h3>
           <p className="text-muted-foreground text-sm max-w-sm mx-auto">
-            You have no active alerts. Urgent reviews and configured keyword triggers will appear
-            here.
+            You have no active alerts. High-risk reviews will appear here automatically.
           </p>
         </div>
       ) : (
         <div className="space-y-8">
-          {/* Active Alerts */}
           <div>
             <h2 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
@@ -128,24 +171,23 @@ export default function AlertsPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between mb-1">
-                        <h4 className="font-semibold text-white capitalize">
-                          {alert.alertType.replace("-", " ")}
-                        </h4>
+                        <h4 className="font-semibold text-white capitalize">{alert.alertType}</h4>
                         <span className="text-xs text-muted-foreground">
                           {new Date(alert.createdAt).toLocaleDateString()}
                         </span>
                       </div>
-                      <p className="text-sm text-muted-foreground/90 mb-3">{alert.message}</p>
-
+                      <p className="text-sm text-muted-foreground/90 mb-3 line-clamp-2">
+                        {alert.message}
+                      </p>
                       <div className="flex gap-2 mt-2">
                         <button
-                          onClick={() => handleAcknowledge(alert.id)}
+                          onClick={() => void handleAcknowledge(alert.reviewId)}
                           className="px-3 py-1.5 rounded-lg text-xs font-medium bg-white/10 text-white hover:bg-white/20 transition-colors"
                         >
                           Acknowledge
                         </button>
                         <button
-                          onClick={() => handleResolve(alert.id)}
+                          onClick={() => void handleResolve(alert.reviewId)}
                           className="px-3 py-1.5 rounded-lg text-xs font-medium bg-primary/20 text-primary border border-primary/30 hover:bg-primary/30 transition-colors"
                         >
                           Mark Resolved
@@ -158,7 +200,6 @@ export default function AlertsPage() {
             </div>
           </div>
 
-          {/* Acknowledged Alerts */}
           {acknowledgedAlerts.length > 0 && (
             <div>
               <h2 className="text-sm font-semibold text-foreground mb-4">
@@ -166,7 +207,7 @@ export default function AlertsPage() {
               </h2>
               <div className="grid gap-3 opacity-75">
                 {acknowledgedAlerts.map((alert) => {
-                  const { icon: Icon, color, bg, border } = getSeverityDetails(alert.severity);
+                  const { icon: Icon, color, bg } = getSeverityDetails(alert.severity);
                   return (
                     <div
                       key={alert.id}
@@ -183,7 +224,7 @@ export default function AlertsPage() {
                         </h4>
                       </div>
                       <button
-                        onClick={() => handleResolve(alert.id)}
+                        onClick={() => void handleResolve(alert.reviewId)}
                         className="px-3 py-1 rounded-lg text-xs font-medium bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
                       >
                         Resolve
