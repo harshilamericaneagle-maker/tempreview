@@ -1,71 +1,96 @@
 "use client";
-import { useAuth } from "@/lib/auth";
+
 import { useEffect, useState } from "react";
-import { getBusinessByOwner, saveBusiness, Business } from "@/lib/store";
 import { Save, Copy, Check, Globe } from "lucide-react";
 
-const CATEGORIES = [
-  "Restaurant",
-  "Retail",
-  "Liquor Store",
-  "Clinic",
-  "Salon",
-  "Hotel",
-  "Gym",
-  "Cafe",
-  "Other",
-];
+const CATEGORY_OPTIONS = [
+  { value: "restaurant", label: "Restaurant" },
+  { value: "retail", label: "Retail" },
+  { value: "liquor", label: "Liquor Store" },
+  { value: "clinic", label: "Clinic" },
+  { value: "salon", label: "Salon" },
+  { value: "hotel", label: "Hotel" },
+  { value: "gym", label: "Gym" },
+  { value: "cafe", label: "Cafe" },
+  { value: "other", label: "Other" },
+] as const;
+
+type Category = (typeof CATEGORY_OPTIONS)[number]["value"];
+
+type ProfileResponse = {
+  tenant: {
+    id: string;
+    name: string;
+    category: Category;
+  };
+  primaryLocation: {
+    id: string;
+    name: string;
+    slug: string;
+    address: string;
+    phone: string | null;
+  };
+};
 
 export default function SettingsPage() {
-  const { user } = useAuth();
-  const [business, setBusiness] = useState<Business | null>(null);
+  const [profile, setProfile] = useState<ProfileResponse | null>(null);
   const [form, setForm] = useState({
     name: "",
-    category: "",
-    description: "",
+    category: "restaurant" as Category,
     phone: "",
-    website: "",
     address: "",
   });
   const [saved, setSaved] = useState(false);
   const [copied, setCopied] = useState(false);
   const [billingMessage, setBillingMessage] = useState("");
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (!user) return;
-    const biz = getBusinessByOwner(user.id);
-    if (biz) {
-      setBusiness(biz);
+  const load = async () => {
+    setLoading(true);
+    const res = await fetch("/api/settings/profile");
+    const json = (await res.json()) as { ok: boolean; data?: ProfileResponse };
+    if (json.ok && json.data) {
+      setProfile(json.data);
       setForm({
-        name: biz.name,
-        category: biz.category,
-        description: biz.description,
-        phone: biz.phone,
-        website: biz.website,
-        address: biz.address,
+        name: json.data.tenant.name,
+        category: json.data.tenant.category,
+        phone: json.data.primaryLocation.phone ?? "",
+        address: json.data.primaryLocation.address,
       });
     }
-  }, [user]);
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    void load();
+  }, []);
 
   const setF =
-    (k: string) =>
-    (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
+    (k: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
       setForm((f) => ({ ...f, [k]: e.target.value }));
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!business) return;
-    const updated = { ...business, ...form };
-    saveBusiness(updated);
-    setBusiness(updated);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    const res = await fetch("/api/settings/profile", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(form),
+    });
+    const json = (await res.json()) as { ok: boolean; data?: ProfileResponse };
+    if (json.ok && json.data) {
+      setProfile(json.data);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    }
   };
 
   const publicUrl =
-    typeof window !== "undefined" ? `${window.location.origin}/business/${business?.slug}` : "";
+    typeof window !== "undefined" && profile?.primaryLocation?.slug
+      ? `${window.location.origin}/r/${profile.primaryLocation.slug}`
+      : "";
 
   const copyLink = () => {
+    if (!publicUrl) return;
     navigator.clipboard.writeText(publicUrl);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -103,17 +128,24 @@ export default function SettingsPage() {
     setBillingMessage(json.error?.message ?? "Unable to open billing portal.");
   };
 
+  if (loading || !profile) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="w-8 h-8 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <div className="h-screen overflow-y-auto">
       <div className="p-8 max-w-2xl">
         <div className="mb-8">
           <h1 className="text-2xl font-bold text-white">Settings</h1>
           <p className="text-muted-foreground text-sm mt-1">
-            Manage your business profile and preferences
+            Manage your tenant profile and billing.
           </p>
         </div>
 
-        {/* Public Link */}
         <div className="glass-card rounded-2xl p-5 mb-6">
           <div className="flex items-center gap-2 mb-3">
             <Globe className="w-4 h-4 text-primary" />
@@ -136,7 +168,6 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {/* Business Profile */}
         <div className="glass-card rounded-2xl p-6">
           <h2 className="text-sm font-semibold text-foreground mb-5">Business Profile</h2>
           <form onSubmit={handleSave} className="space-y-4">
@@ -161,25 +192,13 @@ export default function SettingsPage() {
                   onChange={setF("category")}
                   className="w-full px-4 py-2.5 rounded-xl bg-secondary/50 border border-border text-foreground focus:outline-none focus:border-primary transition-colors text-sm"
                 >
-                  {CATEGORIES.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
+                  {CATEGORY_OPTIONS.map((c) => (
+                    <option key={c.value} value={c.value}>
+                      {c.label}
                     </option>
                   ))}
                 </select>
               </div>
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-muted-foreground mb-1.5">
-                Description
-              </label>
-              <textarea
-                value={form.description}
-                onChange={setF("description")}
-                rows={3}
-                placeholder="Tell customers about your business..."
-                className="w-full px-4 py-2.5 rounded-xl bg-secondary/50 border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary transition-colors text-sm resize-none"
-              />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
@@ -195,13 +214,12 @@ export default function SettingsPage() {
               </div>
               <div>
                 <label className="block text-xs font-medium text-muted-foreground mb-1.5">
-                  Website
+                  Primary Location
                 </label>
                 <input
-                  value={form.website}
-                  onChange={setF("website")}
-                  placeholder="https://yourbusiness.com"
-                  className="w-full px-4 py-2.5 rounded-xl bg-secondary/50 border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary transition-colors text-sm"
+                  value={profile.primaryLocation.name}
+                  disabled
+                  className="w-full px-4 py-2.5 rounded-xl bg-secondary/20 border border-border text-muted-foreground text-sm"
                 />
               </div>
             </div>
@@ -212,6 +230,7 @@ export default function SettingsPage() {
               <input
                 value={form.address}
                 onChange={setF("address")}
+                required
                 placeholder="123 Main St, City, State ZIP"
                 className="w-full px-4 py-2.5 rounded-xl bg-secondary/50 border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-primary transition-colors text-sm"
               />
@@ -233,25 +252,25 @@ export default function SettingsPage() {
           </p>
           <div className="flex gap-2 flex-wrap">
             <button
-              onClick={() => startCheckout("starter")}
+              onClick={() => void startCheckout("starter")}
               className="px-3 py-2 rounded-lg bg-secondary border border-border text-xs"
             >
               Upgrade to Starter
             </button>
             <button
-              onClick={() => startCheckout("pro")}
+              onClick={() => void startCheckout("pro")}
               className="px-3 py-2 rounded-lg bg-secondary border border-border text-xs"
             >
               Upgrade to Pro
             </button>
             <button
-              onClick={() => startCheckout("business")}
+              onClick={() => void startCheckout("business")}
               className="px-3 py-2 rounded-lg bg-secondary border border-border text-xs"
             >
               Upgrade to Business
             </button>
             <button
-              onClick={openPortal}
+              onClick={() => void openPortal()}
               className="px-3 py-2 rounded-lg bg-primary/10 border border-primary/20 text-primary text-xs"
             >
               Open Billing Portal

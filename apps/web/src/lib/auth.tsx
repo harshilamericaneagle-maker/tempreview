@@ -33,6 +33,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setActiveLocation(null);
   }, [session?.user?.tenantId]);
 
+  useEffect(() => {
+    if (!session?.user?.tenantId) return;
+
+    const loadLocations = async () => {
+      const res = await fetch("/api/locations");
+      const json = (await res.json()) as {
+        ok: boolean;
+        data: Array<{ id: string; name: string }>;
+      };
+      if (!json.ok) return;
+
+      setAvailableLocations(json.data);
+      const stored = sessionStorage.getItem("rms_active_location");
+      if (stored) {
+        try {
+          const parsed = JSON.parse(stored) as { id: string; name: string };
+          const match = json.data.find((l) => l.id === parsed.id);
+          if (match) {
+            setActiveLocation(match);
+            return;
+          }
+        } catch {
+          // Ignore invalid stored payload.
+        }
+      }
+
+      if (json.data[0]) setActiveLocation(json.data[0]);
+    };
+
+    void loadLocations();
+  }, [session?.user?.tenantId]);
+
   const handleSetActiveLocation = (loc: AppLocation | null) => {
     setActiveLocation(loc);
     if (loc) {

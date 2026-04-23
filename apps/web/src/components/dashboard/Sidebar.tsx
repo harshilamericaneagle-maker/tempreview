@@ -20,7 +20,6 @@ import {
   Crosshair,
   Blocks,
 } from "lucide-react";
-import { getBusinessByOwner } from "@/lib/store";
 import { useEffect, useState } from "react";
 
 const NAV = [
@@ -45,8 +44,17 @@ export default function DashboardSidebar() {
 
   useEffect(() => {
     if (!user) return;
-    const biz = getBusinessByOwner(user.id);
-    if (biz) setBusinessSlug(biz.slug);
+    const load = async () => {
+      const res = await fetch("/api/settings/profile");
+      const json = (await res.json()) as {
+        ok: boolean;
+        data?: { primaryLocation?: { slug: string } };
+      };
+      if (json.ok && json.data?.primaryLocation?.slug) {
+        setBusinessSlug(json.data.primaryLocation.slug);
+      }
+    };
+    void load();
   }, [user]);
 
   const handleLogout = () => {
@@ -126,7 +134,7 @@ export default function DashboardSidebar() {
       {businessSlug && (
         <div className="px-3 mb-2">
           <Link
-            href={`/business/${businessSlug}`}
+            href={`/r/${businessSlug}`}
             target="_blank"
             className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-all border border-border/50"
           >
